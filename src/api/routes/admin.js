@@ -75,12 +75,10 @@ router.post("/login", adminAuth, async (req, res) => {
         console.log("**********", adminDoc);
         if (!adminDoc) {
             // wrong adminId
-            return res
-                .status(401)
-                .json({
-                    statusText: statusText.INVALID_CREDS,
-                    areCredsInvalid: true,
-                });
+            return res.status(401).json({
+                statusText: statusText.INVALID_CREDS,
+                areCredsInvalid: true,
+            });
         }
 
         const hashedPassword = adminDoc.password;
@@ -92,12 +90,10 @@ router.post("/login", adminAuth, async (req, res) => {
 
         if (!isPasswordMatched) {
             // wrong password
-            return res
-                .status(400)
-                .json({
-                    statusText: statusText.INVALID_CREDS,
-                    areCredsInvalid: true,
-                });
+            return res.status(400).json({
+                statusText: statusText.INVALID_CREDS,
+                areCredsInvalid: true,
+            });
         }
 
         // generate token
@@ -706,12 +702,10 @@ router.get(
         try {
             let user = await User.findOne({ userId }).select("-password");
             if (!user) {
-                return res
-                    .status(404)
-                    .json({
-                        statusText: statusText.FAIL,
-                        message: "user not found",
-                    });
+                return res.status(404).json({
+                    statusText: statusText.FAIL,
+                    message: "user not found",
+                });
             }
 
             const vertNames = await Vertical.find().select("_id name");
@@ -749,12 +743,10 @@ router.get(
                 user: { ...user._doc },
             });
         } catch (err) {
-            return res
-                .status(200)
-                .json({
-                    statusText: statusText.FAIL,
-                    message: "Invalid userId",
-                });
+            return res.status(200).json({
+                statusText: statusText.FAIL,
+                message: "Invalid userId",
+            });
         }
     }
 );
