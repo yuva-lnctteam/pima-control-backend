@@ -94,25 +94,11 @@ const UserSchema = mongoose.Schema(
       type: Object,
       default: {},
     },
-    collegeName: {
-      type: String,
-      //   required: true,
-      //   minLength: [1, "College name is too short"],
-      maxLength: [120, "College name is too long"],
-      trim: true,
-    },
     region: {
       type: String,
       //   required: true,
       //   minLength: [1, "Region is too short"],
       maxLength: [60, "Region is too long"],
-      trim: true,
-    },
-    branch: {
-      type: String,
-      //   required: true,
-      //   minLength: [1, "Branch is too short"],
-      maxLength: [60, "Branch is too long"],
       trim: true,
     },
     //////////////////////////
@@ -183,7 +169,7 @@ const UserSchema = mongoose.Schema(
  */
 
 const User = mongoose.model("user", UserSchema);
-User.createIndexes();
+// User.createIndexes();
 module.exports = User;
 
 // is default value possible for activity ?

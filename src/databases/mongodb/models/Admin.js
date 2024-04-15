@@ -35,5 +35,5 @@ const AdminSchema = mongoose.Schema({
   },
 });
 const Admin = mongoose.model("admin", AdminSchema);
-Admin.createIndexes();
+// Admin.createIndexes();
 module.exports = Admin;
