@@ -44,7 +44,7 @@ router.post("/dummy", adminAuth, async (req, res) => {
         await Admin.create(req.body);
         res.status(200).json({ statusText: statusText.LOGIN_IN_SUCCESS });
     } catch (error) {
-        console.log(error.message);
+        console.log("------", error.message);
         res.status(500).json({ error: statusText.INTERNAL_SERVER_ERROR });
     }
 });
