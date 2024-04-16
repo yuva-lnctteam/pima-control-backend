@@ -106,131 +106,34 @@ router.post("/login", userAuth, async (req, res) => {
         //!new
         //* Find the user in Portal's DB, if present just match the password and login, no need to access main portal's API.
         //* Special case handled below, if the user's password is changed later on the Yuva Portal, and main portal had not updated the password.
-        let userDoc1 = await User.findOne({ userId: userIdOrEmail });
-        if (!userDoc1) userDoc1 = await User.findOne({ email: userIdOrEmail });
-        if (userDoc1) {
-            //just match the password and login accordingly.
-            //match the password
-            const match = await bcrypt.compare(
-                enteredPassword,
-                userDoc1.password
-            );
-            if (!match) {
-                return res.status(401).json({
-                    statusText: statusText.INVALID_CREDS,
-                    areCredsInvalid: true,
-                });
-            }
-            //Generate token and login
-            const data1 = {
-                exp:
-                    Math.floor(Date.now() / 1000) +
-                    vars.token.expiry.USER_IN_SEC,
-                person: {
-                    mongoId: userDoc1._id,
-                    role: "user",
-                },
-            };
 
-            const token1 = jwt.sign(data1, process.env.JWT_SECRET);
+        let userDoc1 = await User.findOne({
+            $or: [{ userId: userIdOrEmail }, { email: userIdOrEmail }],
+        });
 
-            return res
-                .status(200)
-                .json({
-                    statusText: statusText.LOGIN_IN_SUCCESS,
-                    token: token1,
-                });
+        if (!userDoc1) {
+            return res.status(404).json({ statusText: "User Not Found" });
         }
-        //!new ends
-        console.log("HERERE\n");
-        // Step 1: Send request to Main portal to check user credentials
-        const mainPortalApiUrl =
-            "http://yiweb.evalue8.info/wp-json/wp/v2/users/me";
-        const mainPortalAuth = {
-            username: userIdOrEmail,
-            password: enteredPassword,
-        };
 
-        const mainPortalConfig = {
-            headers: {
-                "Content-Type": "application/json",
-            },
-            auth: mainPortalAuth,
-        };
-
-        let mainPortalResponse;
-        try {
-            mainPortalResponse = await axios.post(
-                mainPortalApiUrl,
-                null,
-                mainPortalConfig
-            );
-            //   console.log("here: ", mainPortalResponse);
-        } catch (error) {
-            return res
-                .status(401)
-                .json({
-                    statusText: statusText.INVALID_CREDS,
-                    areCredsInvalid: true,
-                });
+        if (userDoc1.password !== enteredPassword) {
+            return res.status(401).json({ statusText: "Incorrect Password" });
         }
-        //* If we are here, it means, user is not in Portal's Db but has an account on Main portal.
-        //* We have to create his/her account on Yuva Portal as well and login.
 
-        const mainPortalUser = mainPortalResponse.data;
-        //* Create account on main portal
-        const salt = await bcrypt.genSalt(vars.bcryptSaltRounds);
-        const hashedPassword = await bcrypt.hash(enteredPassword, salt);
-
-        const newUser = {
-            userId: userIdOrEmail,
-            password: hashedPassword,
-            email: mainPortalUser.email,
-            fName: mainPortalUser.first_name,
-            lName: mainPortalUser.last_name,
-        };
-
-        let userDoc = await User.create(newUser);
-
-        // Step 3: Generate token
-        const data = {
+        //Generate token and login
+        const data1 = {
             exp: Math.floor(Date.now() / 1000) + vars.token.expiry.USER_IN_SEC,
             person: {
-                mongoId: userDoc._id,
+                mongoId: userDoc1._id,
                 role: "user",
             },
         };
 
-        const token = jwt.sign(data, process.env.JWT_SECRET);
+        const token1 = jwt.sign(data1, process.env.JWT_SECRET);
 
-        res.status(200).json({
+        return res.status(200).json({
             statusText: statusText.LOGIN_IN_SUCCESS,
-            token: token,
+            token: token1,
         });
-    } catch (err) {
-        console.log(err.message);
-        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
-    }
-});
-
-router.post("/check-userid-availability", userAuth, async (req, res) => {
-    const desiredUserId = req.body.userId;
-    // console.log(desiredUserId);
-
-    try {
-        const userDoc = await User.findOne({ userId: desiredUserId });
-
-        if (!userDoc) {
-            res.status(200).json({
-                statusText: statusText.USER_ID_AVAILABLE,
-                isUserIdAvailable: true,
-            });
-        } else {
-            res.status(200).json({
-                statusText: statusText.USER_ID_NOT_AVAILABLE,
-                isUserIdAvailable: false,
-            });
-        }
     } catch (err) {
         console.log(err.message);
 
@@ -315,12 +218,10 @@ router.post(
             const userDoc = await User.findById(req.mongoId)
                 .select("-_id -password -activity")
                 .exec();
-            return res
-                .status(200)
-                .json({
-                    statusText: statusText.VERIFIED_TOKEN,
-                    userDoc: userDoc,
-                });
+            return res.status(200).json({
+                statusText: statusText.VERIFIED_TOKEN,
+                userDoc: userDoc,
+            });
         } catch (error) {
             console.error(error.message);
             res.status(500).json({
