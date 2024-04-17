@@ -1,7 +1,7 @@
-require("dotenv").config();
 const express = require("express");
 const app = express();
 const rateLimit = require('express-rate-limit');
+const dotenv = require('dotenv');
 
 
 // const csvUpload = require("express-fileupload");
