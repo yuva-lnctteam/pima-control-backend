@@ -141,17 +141,6 @@ router.post("/login", userAuth, async (req, res) => {
     }
 });
 
-router.post("/register", userAuth, async (req, res) => {
-    const regisForm = req.body;
-
-    try {
-        await User.create(regisForm);
-        res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
-    } catch (err) {
-        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
-    }
-});
-
 router.post(
     "/reset-password",
     userAuth,

@@ -59,6 +59,18 @@ router.post(
     }
 );
 
+router.post("/register-user", adminAuth, async (req, res) => {
+    const regisForm = req.body;
+
+    console.log("regisForm: ", regisForm);
+    try {
+        await User.create(regisForm);
+        res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
+    } catch (err) {
+        console.log(err);   
+        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
+    }
+});
 //////////////////////////////////////// LOGIN ////////////////////////////////////////////////
 
 router.post("/login", adminAuth, async (req, res) => {
