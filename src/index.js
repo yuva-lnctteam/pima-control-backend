@@ -7,7 +7,7 @@ const dotenv = require('dotenv');
 // const csvUpload = require("express-fileupload");
 const cors = require("cors");
 const corsOptions = {
-    origin: 'https://yuvaportal.youngindians.net', // Only allow requests from your website
+    origin: 'https://pima-control.vercel.app', // Only allow requests from your website
     // origin: 'http://localhost:3000', // Only allow requests from your website
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true, // Enable cookies and authentication headers
