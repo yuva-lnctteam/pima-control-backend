@@ -712,7 +712,7 @@ router.get(
             });
 
         try {
-            let user = await User.findOne({ userId }).select("-password");
+            let user = await User.findOne({ userId });
             if (!user) {
                 return res.status(404).json({
                     statusText: statusText.FAIL,
