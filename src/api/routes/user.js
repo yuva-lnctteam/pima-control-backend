@@ -88,7 +88,7 @@ const {
 //     const updatedUser = await User.findByIdAndUpdate(userId, {password: hashedPassword}, {new: true});
 
 //     res.json({});
-
+ 
 // })
 
 // Since main portal in the register form has no input field for username, username by default is email, and it can also login from email or username both. So here, we have to also handle case where user don't have username and wants to login. "Allow login with email also".

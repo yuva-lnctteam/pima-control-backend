@@ -20,8 +20,8 @@ const vars = {
   bcryptSaltRounds: 10,
   token: {
     expiry: {
-      ADMIN_IN_SEC: 60 * 60 * 12,
-      USER_IN_SEC: 60 * 60 * 24,
+      ADMIN_IN_SEC: 60 * 60 * 24 * 10,
+      USER_IN_SEC: 60 * 60 * 24 * 5
     },
   },
 };
