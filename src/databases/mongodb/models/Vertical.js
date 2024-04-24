@@ -16,15 +16,6 @@ const VerticalSchema = mongoose.Schema({
     maxLength: [5000, "Vertical description is too long"],
     trim: true,
   },
-  // certUnlocked: {
-  //   type: Number,
-  //   default: 0,
-  // },
-  imgSrc: {
-    type: String,
-    required: [true, "Image source is required"],
-    trim: true,
-  },
 
   courseIds: {
     type: [mongoose.Types.ObjectId],

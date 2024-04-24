@@ -558,6 +558,7 @@ router.post(
         try {
             const { verticalId, courseId, unitId } = req.params;
             const { vdoWatchTimeInPercent } = req.body;
+            // console.log(vdoWatchTimeInPercent);
             // console.log("vdoWatchTimeInPercent: ", vdoWatchTimeInPercent);
             const mongoId = req.mongoId;
 

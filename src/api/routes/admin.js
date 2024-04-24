@@ -67,7 +67,7 @@ router.post("/register-user", adminAuth, async (req, res) => {
         await User.create(regisForm);
         res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
     } catch (err) {
-        console.log(err);   
+        console.log(err);
         res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
     }
 });
@@ -373,28 +373,13 @@ router.post(
                     .json({ statusText: statusText.COURSE_NOT_FOUND });
             }
 
-            console.log("*********", unit);
-
+            console.log("---------", courseDoc);
             courseDoc.unitArr.push(unit);
-            courseDoc.save((err, updatedCourseDoc) => {
-                if (err) {
-                    // console.error("apoorv", err.message);
-
-                    res.status(500).json({
-                        statusText: statusText.INTERNAL_SERVER_ERROR,
-                    });
-                } else {
-                    // console.log(updatedCourseDoc);
-
-                    res.status(200).json({
-                        statusText: statusText.UNIT_CREATE_SUCCESS,
-                    });
-                }
-            });
+            await courseDoc.save();
 
             // console.log(courseDoc); // new = true to return the updated doc
         } catch (err) {
-            console.error(err.message);
+            console.error(err);
             res.status(500).json({
                 statusText: statusText.INTERNAL_SERVER_ERROR,
             });
