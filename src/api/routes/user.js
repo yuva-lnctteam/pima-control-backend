@@ -119,6 +119,7 @@ router.post("/login", userAuth, async (req, res) => {
             return res.status(401).json({ statusText: "Incorrect Password" });
         }
 
+        console.log(userDoc1);
         //Generate token and login
         const data1 = {
             exp: Math.floor(Date.now() / 1000) + vars.token.expiry.USER_IN_SEC,
@@ -777,17 +778,14 @@ router.post(
 );
 
 router.get(
-    "/profile/:userId",
+    "/profile",
     userAuth,
     fetchPerson,
     isUser,
     async (req, res) => {
-        let { userId } = req.params;
-
         try {
-            let user = await User.findOne({
-                userId: userId,
-            }).select("-password");
+            console.log(req.mongoId);
+            let user = await User.findById(req.mongoId).select("-password");
 
             if (!user) {
                 return res.status(404).send({
