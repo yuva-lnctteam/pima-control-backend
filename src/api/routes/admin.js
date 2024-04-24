@@ -784,7 +784,7 @@ router.get(
         let { userId } = req.params;
 
         try {
-            let user = await User.findById({
+            let user = await User.find({
                 userId: userId,
             });
 
