@@ -784,7 +784,6 @@ router.get(
     isUser,
     async (req, res) => {
         try {
-            console.log(req.mongoId);
             let user = await User.findById(req.mongoId).select("-password");
 
             if (!user) {
