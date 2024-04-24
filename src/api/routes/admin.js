@@ -718,7 +718,7 @@ router.patch(
             }
 
             // changing the password for the users
-            const user = await User.find({
+            const user = await User.findOne({
                 userId: userId,
             });
 
@@ -751,7 +751,7 @@ router.delete(
         try {
             const { userId } = req.params;
 
-            let user = await User.find({
+            let user = await User.findOne({
                 userId: userId,
             });
             if (!user) {
