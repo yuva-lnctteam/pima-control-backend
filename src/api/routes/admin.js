@@ -828,7 +828,9 @@ router.patch(
             }
 
             // changing the password for the users
-            const user = await User.findById(userId);
+            const user = await User.find({
+                userId: userId,
+            });
 
             if (!user) {
                 return res.status(404).send({
@@ -859,12 +861,18 @@ router.delete(
         try {
             const { userId } = req.params;
 
-            let user = await User.findByIdAndDelete(userId);
+            let user = await User.find({
+                userId: userId,
+            });
             if (!user) {
                 return res.status(404).send({
                     statusText: "User Not Found",
                 });
             }
+
+            await User.deleteOne({
+                userId: userId,
+            });
 
             return res.status(200).send({
                 statusText: "User Deleted Successfully",
