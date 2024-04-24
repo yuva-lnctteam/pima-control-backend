@@ -695,71 +695,6 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
     }
 });
 
-router.get(
-    "/users/:userId",
-    adminAuth,
-    fetchPerson,
-    isAdmin,
-    async (req, res) => {
-        let { userId } = req.params;
-        if (userId == "")
-            res.status(400).json({
-                statusText: statusText.FAIL,
-                message: "userId is empty",
-            });
-
-        try {
-            let user = await User.findOne({ userId });
-            if (!user) {
-                return res.status(404).json({
-                    statusText: statusText.FAIL,
-                    message: "user not found",
-                });
-            }
-
-            const vertNames = await Vertical.find().select("_id name");
-            const vertMap = {};
-            const vertData = {};
-            vertNames.forEach((vert) => {
-                vertMap[vert._id] = vert.name;
-                vertData[vert.name] = 0;
-            });
-
-            let activity = user.activity;
-            for (let vertical in activity) {
-                let ct = 0;
-                for (let course in activity[vertical]) {
-                    for (let unit in activity[vertical][course]) {
-                        for (let quiz in activity[vertical][course][unit]) {
-                            const quizScore =
-                                activity[vertical][course][unit].quiz
-                                    .scoreInPercent;
-                            if (quizScore >= 60) {
-                                ct += 1;
-                            }
-                        }
-                    }
-                }
-
-                vertData[vertMap[vertical.substring(1)]] = ct;
-            }
-
-            // remove activity from user object
-            user.activity = vertData;
-
-            return res.status(200).json({
-                statusText: statusText.SUCCESS,
-                user: { ...user._doc },
-            });
-        } catch (err) {
-            return res.status(200).json({
-                statusText: statusText.FAIL,
-                message: "Invalid userId",
-            });
-        }
-    }
-);
-
 router.patch(
     "/users/reset-password/:userId",
     adminAuth,
@@ -846,10 +781,12 @@ router.get(
     fetchPerson,
     isAdmin,
     async (req, res) => {
-        let { id } = req.params;
+        let { userId } = req.params;
 
         try {
-            let user = await User.findById(id);
+            let user = await User.findById({
+                userId: userId,
+            });
 
             if (!user) {
                 res.status(404).send({
