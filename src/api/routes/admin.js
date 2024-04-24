@@ -408,20 +408,10 @@ router.post(
             console.log("*********", unit);
 
             courseDoc.unitArr.push(unit);
-            courseDoc.save((err, updatedCourseDoc) => {
-                if (err) {
-                    // console.error("apoorv", err.message);
+            await courseDoc.save();
 
-                    res.status(500).json({
-                        statusText: statusText.INTERNAL_SERVER_ERROR,
-                    });
-                } else {
-                    // console.log(updatedCourseDoc);
-
-                    res.status(200).json({
-                        statusText: statusText.UNIT_CREATE_SUCCESS,
-                    });
-                }
+            res.status(200).json({
+                statusText: statusText.UNIT_CREATE_SUCCESS,
             });
 
             // console.log(courseDoc); // new = true to return the updated doc
@@ -704,41 +694,6 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
         res.status(500).json({ statusText: statusText.FAIL });
     }
 });
-
-router.get(
-    "/users/college-names",
-    adminAuth,
-    fetchPerson,
-    isAdmin,
-    async (req, res) => {
-        const { search } = req.query;
-        try {
-            let collegeNames = await User.aggregate([
-                {
-                    $match: {
-                        collegeName: { $regex: new RegExp(search, "i") },
-                    },
-                },
-                {
-                    $group: {
-                        _id: "$collegeName",
-                    },
-                },
-            ]);
-
-            collegeNames = collegeNames.map((clg) => clg?._id);
-
-            // console.log("**********",collegeNames);
-
-            return res
-                .status(200)
-                .json({ statusText: statusText.SUCCESS, collegeNames });
-        } catch (err) {
-            console.log(err);
-            return res.status(500).json({ statusText: statusText.FAIL });
-        }
-    }
-);
 
 router.get(
     "/users/:userId",
