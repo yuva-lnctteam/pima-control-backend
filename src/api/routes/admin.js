@@ -789,13 +789,13 @@ router.get(
             });
 
             if (!user) {
-                res.status(404).send({
+                return res.status(404).send({
                     statusText: "User not found",
                 });
             }
 
             if (!user.activity || user.activity == {}) {
-                res.status(200).send({
+                return res.status(200).send({
                     statusText: "Success",
                     data: {
                         user: {
@@ -841,7 +841,7 @@ router.get(
                 });
             }
 
-            res.status(200).send({
+            return res.status(200).send({
                 statusText: "Success",
                 data: {
                     user: {
@@ -853,7 +853,7 @@ router.get(
             });
         } catch (err) {
             console.log(err);
-            res.status(500).send({
+            return res.status(500).send({
                 statusText: "Internal Server Error",
                 error: err.message,
             });
