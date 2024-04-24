@@ -776,25 +776,26 @@ router.post(
     }
 );
 
-// router.get("/profile/:id", userAuth, fetchPerson, isUser, async (req, res) => {
-//     let { id } = req.params;
+router.get("/profile/:id", userAuth, fetchPerson, isUser, async (req, res) => {
+    let { id } = req.params;
 
-//     try {
-//         let user = await User.findById(id);
+    try {
+        let user = await User.findById(id);
 
-//         if(!user){
-//             res.status(404).send({
-//                 statusText: "User not found"
-//             })
-//         }
+        if(!user){
+            res.status(404).send({
+                statusText: "User not found"
+            })
+        }
 
-//         let activites = user.activity;
+        let activity = user.activity;
 
-
-//     } catch (err) {
-//         console.log(err);
-//     }
-// });
+        
+        
+    } catch (err) {
+        console.log(err);
+    }
+});
 
 // const { unlink, stat } = require("node:fs/promises");
 // const { all } = require("./admin");

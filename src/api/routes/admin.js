@@ -805,7 +805,7 @@ router.get(
     }
 );
 
-router.post(
+router.patch(
     "/users/reset-password/:userId",
     adminAuth,
     fetchPerson,
