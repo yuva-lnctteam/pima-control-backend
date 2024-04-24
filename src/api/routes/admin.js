@@ -27,7 +27,11 @@ var jwt = require("jsonwebtoken");
 // My utilities
 const { vars } = require("../../utilities/constants.js");
 const statusText = require("../../utilities/status_text.js");
-const { fetchPerson, isAdmin } = require("../../middlewares");
+const { fetchPerson, isAdmin, upload } = require("../../middlewares");
+const {
+    uploadOnCloudinary,
+    deleteFromCloudinary,
+} = require("../../utilities/cloudinary.js");
 
 router.use(cors());
 
@@ -67,7 +71,7 @@ router.post("/register-user", adminAuth, async (req, res) => {
         await User.create(regisForm);
         res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
     } catch (err) {
-        console.log(err);   
+        console.log(err);
         res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
     }
 });
@@ -275,13 +279,41 @@ router.post(
     adminAuth,
     fetchPerson,
     isAdmin,
+    upload.single("verticalImg"),
     async (req, res) => {
         // no validation needed mongodb will handle even if name, desc, src is null/empty
         // console.log(req.body);
         // const { name, desc, imgSrc } = req.body;
 
         try {
-            await Vertical.create(req.body);
+            let verticalImgPath = req.file?.path;
+            if (!verticalImgPath) {
+                return res.status(501).json({
+                    statusText: statusText.INTERNAL_SERVER_ERROR,
+                });
+            }
+
+            const verticalImageUploaded = await uploadOnCloudinary(
+                verticalImgPath,
+                "verticals"
+            );
+
+            if (!verticalImageUploaded) {
+                res.status(501).send({
+                    statusText: "Your file could not be uploaded.",
+                });
+            }
+
+            let image = {
+                src: verticalImageUploaded?.url,
+                publicId: verticalImageUploaded.public_id,
+            };
+
+            await Vertical.create({
+                ...req.body,
+                image,
+            });
+
             res.status(200).json({
                 statusText: statusText.VERTICAL_CREATE_SUCCESS,
             });
@@ -417,6 +449,16 @@ router.delete(
         const { verticalId } = req.params;
 
         try {
+            const vertical = await Vertical.findById(verticalId);
+            if (!vertical) {
+                return res.status(401).send({
+                    statusText: "Vertical Not Found",
+                });
+            }
+
+            // deleting from cloudinary the image
+            await deleteFromCloudinary(vertical.image?.publicId);
+
             const verticalDoc = await Vertical.findByIdAndDelete(verticalId); // returns the doc just before deletion
             // console.log(verticalDoc);
 
