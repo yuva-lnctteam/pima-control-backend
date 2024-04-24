@@ -776,7 +776,7 @@ router.delete(
 );
 
 router.get(
-    "users/profile/:userId",
+    "/users/profile/:userId",
     adminAuth,
     fetchPerson,
     isAdmin,
