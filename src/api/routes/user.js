@@ -776,83 +776,91 @@ router.post(
     }
 );
 
-router.get("/profile/:id", userAuth, fetchPerson, isUser, async (req, res) => {
-    let { id } = req.params;
+router.get(
+    "/profile/:userId",
+    userAuth,
+    fetchPerson,
+    isUser,
+    async (req, res) => {
+        let { userId } = req.params;
 
-    try {
-        let user = await User.findById(id).select("-password");
+        try {
+            let user = await User.findOne({
+                userId: userId,
+            }).select("-password");
 
-        if (!user) {
-            res.status(404).send({
-                statusText: "User not found",
-            });
-        }
+            if (!user) {
+                return res.status(404).send({
+                    statusText: "User not found",
+                });
+            }
 
-        if (!user.activity) {
-            res.status(200).send({
+            if (!user.activity || user.activity == {}) {
+                return res.status(200).send({
+                    statusText: "Success",
+                    data: {
+                        user: {
+                            ...user._doc,
+                            activity: {},
+                        },
+                        allVerticalsData: [],
+                    },
+                });
+            }
+
+            let activity = user.activity;
+
+            let allVerticalsData = [];
+            for (let vertical in activity) {
+                const id = vertical.slice(1);
+                let verticalData = await Vertical.findById(id);
+
+                let coursesData = [];
+                for (let course in activity[vertical]) {
+                    let courseId = course.slice(1);
+                    let courseData = await Course.findById(courseId);
+
+                    let unitsData = [];
+                    for (let unit in activity[vertical][course]) {
+                        let unitId = unit.slice(1);
+                        let unitData = await Course.findById(unitId);
+                        unitsData.push({
+                            ...unitData,
+                            progress: activity[vertical][course][unit],
+                        });
+                    }
+
+                    coursesData.push({
+                        courseData,
+                        unitsData,
+                    });
+                }
+
+                allVerticalsData.push({
+                    verticalData,
+                    coursesData,
+                });
+            }
+
+            return res.status(200).send({
                 statusText: "Success",
                 data: {
                     user: {
                         ...user._doc,
                         activity: {},
                     },
-                    allVerticalsData: [],
+                    allVerticalsData,
                 },
             });
-        }
-
-        let activity = user.activity;
-
-        let allVerticalsData = [];
-        for (let vertical in activity) {
-            const id = vertical.slice(1);
-            let verticalData = await Vertical.findById(id);
-
-            let coursesData = [];
-            for (let course in activity[vertical]) {
-                let courseId = course.slice(1);
-                let courseData = await Course.findById(courseId);
-
-                let unitsData = [];
-                for (let unit in activity[vertical][course]) {
-                    let unitId = unit.slice(1);
-                    let unitData = await Course.findById(unitId);
-                    unitsData.push({
-                        ...unitData,
-                        progress: activity[vertical][course][unit],
-                    });
-                }
-
-                coursesData.push({
-                    courseData,
-                    unitsData,
-                });
-            }
-
-            allVerticalsData.push({
-                verticalData,
-                coursesData,
+        } catch (err) {
+            console.log(err);
+            res.status(500).send({
+                statusText: "Internal Server Error",
+                error: err.message,
             });
         }
-
-        res.status(200).send({
-            statusText: "Success",
-            data: {
-                user: {
-                    ...user._doc,
-                    activity: {},
-                },
-                allVerticalsData,
-            },
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).send({
-            statusText: "Internal Server Error",
-            error: err.message,
-        });
     }
-});
+);
 
 // const { unlink, stat } = require("node:fs/promises");
 // const { all } = require("./admin");

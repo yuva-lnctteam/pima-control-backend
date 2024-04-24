@@ -784,7 +784,7 @@ router.get(
         let { userId } = req.params;
 
         try {
-            let user = await User.find({
+            let user = await User.findOne({
                 userId: userId,
             });
 
@@ -794,7 +794,7 @@ router.get(
                 });
             }
 
-            if (!user.activity) {
+            if (!user.activity || user.activity == {}) {
                 res.status(200).send({
                     statusText: "Success",
                     data: {
