@@ -788,6 +788,19 @@ router.get("/profile/:id", userAuth, fetchPerson, isUser, async (req, res) => {
             });
         }
 
+        if (!user.activity) {
+            res.status(200).send({
+                statusText: "Success",
+                data: {
+                    user: {
+                        ...user._doc,
+                        activity: {},
+                    },
+                    allVerticalsData: [],
+                },
+            });
+        }
+
         let activity = user.activity;
 
         let allVerticalsData = [];
