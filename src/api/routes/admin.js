@@ -805,4 +805,76 @@ router.get(
     }
 );
 
+router.post(
+    "/users/reset-password/:userId",
+    adminAuth,
+    fetchPerson,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const { userId } = req.params;
+            const password = req.body.password;
+
+            if (!password) {
+                return res.status(404).send({
+                    statusText: "Password not found",
+                });
+            }
+
+            if (password === "") {
+                return res.status(404).send({
+                    statusText: "Password could not be empty",
+                });
+            }
+
+            // changing the password for the users
+            const user = await User.findById(userId);
+
+            if (!user) {
+                return res.status(404).send({
+                    statusText: "User Not Found",
+                });
+            }
+
+            user.password = password;
+            await user.save();
+
+            return res.status(200).send({
+                statusText: "Password Updated successfully",
+            });
+        } catch (err) {
+            return res.status(501).send({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
+        }
+    }
+);
+
+router.delete(
+    "/users/delete-user/:userId",
+    adminAuth,
+    fetchPerson,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const { userId } = req.params;
+
+            let user = await User.findByIdAndDelete(userId);
+            if (!user) {
+                return res.status(404).send({
+                    statusText: "User Not Found",
+                });
+            }
+
+            return res.status(200).send({
+                statusText: "User Deleted Successfully",
+            });
+        } catch (err) {
+            res.status(501).send({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
+        }
+    }
+);
+
 module.exports = router;

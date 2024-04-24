@@ -88,7 +88,7 @@ const {
 //     const updatedUser = await User.findByIdAndUpdate(userId, {password: hashedPassword}, {new: true});
 
 //     res.json({});
- 
+
 // })
 
 // Since main portal in the register form has no input field for username, username by default is email, and it can also login from email or username both. So here, we have to also handle case where user don't have username and wants to login. "Allow login with email also".
@@ -776,6 +776,26 @@ router.post(
     }
 );
 
+// router.get("/profile/:id", userAuth, fetchPerson, isUser, async (req, res) => {
+//     let { id } = req.params;
+
+//     try {
+//         let user = await User.findById(id);
+
+//         if(!user){
+//             res.status(404).send({
+//                 statusText: "User not found"
+//             })
+//         }
+
+//         let activites = user.activity;
+
+
+//     } catch (err) {
+//         console.log(err);
+//     }
+// });
+
 // const { unlink, stat } = require("node:fs/promises");
 // const { all } = require("./admin");
 
@@ -883,12 +903,14 @@ router.post(
 //     }
 // );
 
+// router.post
+
 module.exports = router;
 
 /*
 References:
 Sending emails:
-https://stackoverflow.com/questions/24695750/is-it-possible-to-to-send-bulk-pre-rendered-email-via-the-sendgrid-api
+https://stackoverflow.com/questions/24695750/is-it-po0ssible-to-to-send-bulk-pre-rendered-email-via-the-sendgrid-api
 https://stackoverflow.com/questions/41329056/bulk-email-sending-usiing-node-js
 */
 
