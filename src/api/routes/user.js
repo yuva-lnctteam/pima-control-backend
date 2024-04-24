@@ -276,7 +276,7 @@ router.get("/verticals/all", userAuth, async (req, res) => {
                 _id: oldDoc._id,
                 name: oldDoc.name,
                 desc: oldDoc.desc,
-                imgSrc: oldDoc.imgSrc,
+                image: oldDoc.image,
                 courseCount: oldDoc.courseIds.length,
                 // certUnlocked: oldDoc.certUnlocked ? oldDoc.certUnlocked : 0,
             };

@@ -152,7 +152,7 @@ router.get(
                     _id: oldDoc._id,
                     name: oldDoc.name,
                     desc: oldDoc.desc,
-                    imgSrc: oldDoc.imgSrc,
+                    image: oldDoc.image,
                     courseCount: oldDoc.courseIds.length,
                 };
 
