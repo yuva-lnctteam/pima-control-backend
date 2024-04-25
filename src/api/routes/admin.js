@@ -63,34 +63,46 @@ router.post(
     }
 );
 
-router.post("/register-user", adminAuth, upload.single("userImg"), async (req, res) => {
-    const regisForm = req.body;
+router.post(
+    "/register-user",
+    adminAuth,
+    upload.single("userImg"),
+    async (req, res) => {
+        const regisForm = req.body;
 
-    try {
-        let userImgPath = req.file?.path;
-        let image = null;
-        if (userImgPath) {
-            const imageUploaded = await uploadOnCloudinary(userImgPath, "users");
-            if (!imageUploaded) {
-                return res.status(501).send({
-                    statusText: "Your file could not be uploaded.",
-                });
+        try {
+            let userImgPath = req.file?.path;
+            let image = null;
+            if (userImgPath) {
+                const imageUploaded = await uploadOnCloudinary(
+                    userImgPath,
+                    "users"
+                );
+                if (!imageUploaded) {
+                    return res.status(501).send({
+                        statusText: "Your file could not be uploaded.",
+                    });
+                }
+                image = {
+                    src: imageUploaded?.url,
+                    publicId: imageUploaded.public_id,
+                };
             }
-            image = {
-                src: imageUploaded?.url,
-                publicId: imageUploaded.public_id,
-            };
+
+            regisForm.image = image;
+
+            await User.create(regisForm);
+            res.status(200).json({
+                statusText: statusText.REGISTRATION_SUCCESS,
+            });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
         }
-
-        regisForm.image = image;
-
-        await User.create(regisForm);
-        res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
     }
-});
+);
 //////////////////////////////////////// LOGIN ////////////////////////////////////////////////
 
 router.post("/login", adminAuth, async (req, res) => {
@@ -217,6 +229,7 @@ router.get(
                     _id: oldDoc._id,
                     name: oldDoc.name,
                     desc: oldDoc.desc,
+                    image: oldDoc.image,
                     unitCount: oldDoc.unitArr.length,
                 };
 
@@ -348,12 +361,39 @@ router.post(
     adminAuth,
     fetchPerson,
     isAdmin,
+    upload.single("courseImg"),
     async (req, res) => {
         // todo : validation
-        const { verticalId } = req.params;
-
         try {
-            const courseDoc = await Course.create(req.body);
+            const { verticalId } = req.params;
+
+            let courseImgPath = req.file?.path;
+            if (!courseImgPath) {
+                return res.status(501).json({
+                    statusText: "Image not provided",
+                });
+            }
+
+            const courseImageUploaded = await uploadOnCloudinary(
+                courseImgPath,
+                "courses"
+            );
+
+            if (!courseImageUploaded) {
+                res.status(501).send({
+                    statusText: "Your file could not be uploaded.",
+                });
+            }
+
+            let image = {
+                src: courseImageUploaded?.url,
+                publicId: courseImageUploaded.public_id,
+            };
+
+            const course = req.body;
+            course.image = image;
+
+            const courseDoc = await Course.create(course);
             // console.log(courseDoc);
 
             const verticalDoc = await Vertical.findOneAndUpdate(
