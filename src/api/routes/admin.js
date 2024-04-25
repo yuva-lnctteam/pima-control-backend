@@ -937,7 +937,7 @@ router.post(
 
             return res.status(200).json({
                 statusText: statusText.SUCCESS,
-                image: {
+                pdf: {
                     url: pdfUploaded.url,
                     publicId: pdfUploaded.public_id,
                 },
