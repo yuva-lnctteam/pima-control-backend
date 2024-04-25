@@ -68,6 +68,9 @@ const UserSchema = mongoose.Schema(
                 },
             },
         },
+        image: {
+            type: Object,
+        },
         userId: {
             type: String,
             required: true,

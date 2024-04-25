@@ -64,22 +64,46 @@ router.post(
     }
 );
 
-router.post("/register-user", adminAuth, async (req, res) => {
-    const regisForm = req.body;
+router.post(
+    "/register-user",
+    adminAuth,
+    upload.single("userImg"),
+    async (req, res) => {
+        const regisForm = req.body;
 
-    console.log("regisForm: ", regisForm);
-    try {
-        await User.create(regisForm);
-        res.status(200).json({
-            statusText: statusText.REGISTRATION_SUCCESS,
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({
-            statusText: statusText.INTERNAL_SERVER_ERROR,
-        });
+        try {
+            let userImgPath = req.file?.path;
+            let image = null;
+            if (userImgPath) {
+                const imageUploaded = await uploadOnCloudinary(
+                    userImgPath,
+                    "users"
+                );
+                if (!imageUploaded) {
+                    return res.status(501).send({
+                        statusText: "Your file could not be uploaded.",
+                    });
+                }
+                image = {
+                    src: imageUploaded?.url,
+                    publicId: imageUploaded.public_id,
+                };
+            }
+
+            regisForm.image = image;
+
+            await User.create(regisForm);
+            res.status(200).json({
+                statusText: statusText.REGISTRATION_SUCCESS,
+            });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
+        }
     }
-});
+);
 //////////////////////////////////////// LOGIN ////////////////////////////////////////////////
 
 router.post("/login", adminAuth, async (req, res) => {
@@ -206,8 +230,8 @@ router.get(
                     _id: oldDoc._id,
                     name: oldDoc.name,
                     desc: oldDoc.desc,
-                    unitCount: oldDoc.unitArr.length,
                     image: oldDoc.image,
+                    unitCount: oldDoc.unitArr.length,
                 };
 
                 return newDoc;
@@ -328,7 +352,7 @@ router.post(
                 statusText: statusText.VERTICAL_CREATE_SUCCESS,
             });
         } catch (err) {
-            console.log("----------------", err);
+            console.error(err.message);
             res.status(500).json({
                 statusText: statusText.INTERNAL_SERVER_ERROR,
             });
@@ -346,10 +370,12 @@ router.post(
     async (req, res) => {
         // todo : validation
         try {
+            const { verticalId } = req.params;
+
             let courseImgPath = req.file?.path;
             if (!courseImgPath) {
                 return res.status(501).json({
-                    statusText: statusText.INTERNAL_SERVER_ERROR,
+                    statusText: "Image not provided",
                 });
             }
 
@@ -368,12 +394,11 @@ router.post(
                 src: courseImageUploaded?.url,
                 publicId: courseImageUploaded.public_id,
             };
-            const { verticalId } = req.params;
 
-            const courseDoc = await Course.create({
-                ...req.body,
-                image,
-            });
+            const course = req.body;
+            course.image = image;
+
+            const courseDoc = await Course.create(course);
             // console.log(courseDoc);
 
             const verticalDoc = await Vertical.findOneAndUpdate(
@@ -408,12 +433,11 @@ router.post(
     adminAuth,
     fetchPerson,
     isAdmin,
-    upload.single("unitImg"),
     async (req, res) => {
         // console.log(req.originalUrl);
 
         // todo : validation
-
+        let unit = req.body;
         let { courseId } = req.params;
 
         // ! manually check and add field in unit doc
@@ -428,12 +452,6 @@ router.post(
         // courseId = "640186d18eb87edf965c9941";
 
         try {
-            // const courseDoc = await Course.findOneAndUpdate(
-            //   { _id: courseId }
-            //   { $push: { unitArr: unit } },
-            //   { new: true }
-            // );
-
             const courseDoc = await Course.findById(courseId);
 
             if (!courseDoc) {
@@ -464,29 +482,23 @@ router.post(
                 src: unitImgUploaded?.url,
                 publicId: unitImgUploaded.public_id,
             };
-
-            const unitdata = JSON.parse(req.body.unit);
             const unit = {
-                unit: unitdata,
+                unit: req.body.unit,
                 image: image,
             };
 
-            // const unit = req.body.unit;
-
-            console.log("--------------", unit);
+            // console.log(unit);
 
             // console.log("---------", courseDoc);
-            courseDoc.unitArr.push(unit.video);
+            courseDoc.unitArr.push(unit);
             await courseDoc.save();
             console.log("****************************Pohocha yha");
 
             res.status(200).json({
                 statusText: statusText.UNIT_CREATE_SUCCESS,
             });
-
-            // console.log(courseDoc); // new = true to return the updated doc
         } catch (err) {
-            console.error(err);
+            console.error(err.message);
             res.status(500).json({
                 statusText: statusText.INTERNAL_SERVER_ERROR,
             });
@@ -559,15 +571,6 @@ router.delete(
         const objectCourseId = mongoose.Types.ObjectId(courseId); // imp to convert to string to objectId
 
         try {
-            const course = await Course.findById(courseId);
-            if (!course) {
-                return res.status(401).send({
-                    statusText: "Course Not Found",
-                });
-            }
-
-            await deleteFromCloudinary(course.image?.publicId);
-
             const courseDoc = await Course.findByIdAndDelete(courseId);
             // console.log(courseDoc);
 
