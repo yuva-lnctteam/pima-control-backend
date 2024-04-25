@@ -32,6 +32,7 @@ const {
     uploadOnCloudinary,
     deleteFromCloudinary,
 } = require("../../utilities/cloudinary.js");
+const { json } = require("body-parser");
 
 router.use(cors());
 
@@ -206,7 +207,7 @@ router.get(
                     name: oldDoc.name,
                     desc: oldDoc.desc,
                     unitCount: oldDoc.unitArr.length,
-                    imgSrc: oldDoc.imgSrc,
+                    image: oldDoc.image,
                 };
 
                 return newDoc;
@@ -238,8 +239,11 @@ router.get(
 
         const { courseId } = req.params;
 
+        console.log(">>>>>>>>>>>>>>>>>Pohocha yha");
+
         try {
             const courseDoc = await Course.findById(courseId);
+            console.log(">>>>>>>>>>>>>>>>>yha nhi pohocha kya");
 
             if (!courseDoc) {
                 return res
@@ -260,6 +264,7 @@ router.get(
                     },
                     activityCount: oldDoc.activities.length,
                     quizCount: oldDoc.quiz.length,
+                    // image: oldDoc.image,
                 };
 
                 return newDoc;
@@ -459,16 +464,21 @@ router.post(
                 src: unitImgUploaded?.url,
                 publicId: unitImgUploaded.public_id,
             };
+
+            const unitdata = JSON.parse(req.body.unit);
             const unit = {
-                unit: req.body.unit,
+                unit: unitdata,
                 image: image,
             };
 
-            // console.log(unit);
+            // const unit = req.body.unit;
+
+            console.log("--------------", unit);
 
             // console.log("---------", courseDoc);
-            courseDoc.unitArr.push(unit);
+            courseDoc.unitArr.push(unit.video);
             await courseDoc.save();
+            console.log("****************************Pohocha yha");
 
             res.status(200).json({
                 statusText: statusText.UNIT_CREATE_SUCCESS,
