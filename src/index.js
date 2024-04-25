@@ -41,6 +41,7 @@ app.use("/api/public", require("./api/routes/public.js"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
+
     console.log(`Server is listening at port ${PORT}`);
 
     //   createDir(vars.imageFile.ORIGINAL_UPLOADS_DIR_PATH);

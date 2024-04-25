@@ -282,7 +282,9 @@ const doesUnitActivityExist = async (req, res, next) => {
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "./public/temp");
+        let dir = process.cwd() + "/public/temp";
+        dir = dir.replace(/\\/g, "/");
+        cb(null, dir);
     },
     filename: function (req, file, cb) {
         cb(null, v4() + "-" + file.originalname);
