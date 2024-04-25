@@ -32,7 +32,6 @@ const {
     uploadOnCloudinary,
     deleteFromCloudinary,
 } = require("../../utilities/cloudinary.js");
-const { json } = require("body-parser");
 
 router.use(cors());
 
@@ -263,11 +262,8 @@ router.get(
 
         const { courseId } = req.params;
 
-        console.log(">>>>>>>>>>>>>>>>>Pohocha yha");
-
         try {
             const courseDoc = await Course.findById(courseId);
-            console.log(">>>>>>>>>>>>>>>>>yha nhi pohocha kya");
 
             if (!courseDoc) {
                 return res
@@ -288,7 +284,6 @@ router.get(
                     },
                     activityCount: oldDoc.activities.length,
                     quizCount: oldDoc.quiz.length,
-                    // image: oldDoc.image,
                 };
 
                 return newDoc;
@@ -460,39 +455,8 @@ router.post(
                     .json({ statusText: statusText.COURSE_NOT_FOUND });
             }
 
-            let unitimgPath = req.file?.path;
-            if (!unitimgPath) {
-                return res.status(501).json({
-                    statusText: statusText.INTERNAL_SERVER_ERROR,
-                });
-            }
-
-            const unitImgUploaded = await uploadOnCloudinary(
-                unitimgPath,
-                "units"
-            );
-
-            if (!unitImgUploaded) {
-                res.status(501).send({
-                    statusText: "Your file could not be uploaded.",
-                });
-            }
-
-            let image = {
-                src: unitImgUploaded?.url,
-                publicId: unitImgUploaded.public_id,
-            };
-            const unit = {
-                unit: req.body.unit,
-                image: image,
-            };
-
-            // console.log(unit);
-
-            // console.log("---------", courseDoc);
             courseDoc.unitArr.push(unit);
             await courseDoc.save();
-            console.log("****************************Pohocha yha");
 
             res.status(200).json({
                 statusText: statusText.UNIT_CREATE_SUCCESS,
