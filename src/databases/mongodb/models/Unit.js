@@ -18,6 +18,9 @@ const UnitSchema = mongoose.Schema({
             required: [true, "Video source is required"],
             trim: true,
         },
+        image: {
+            type: Object,
+        },
     },
 
     activities: {
