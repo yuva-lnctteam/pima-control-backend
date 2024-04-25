@@ -161,7 +161,7 @@ router.get(
                     _id: oldDoc._id,
                     name: oldDoc.name,
                     desc: oldDoc.desc,
-                    imgSrc: oldDoc.imgSrc,
+                    image: oldDoc.image,
                     courseCount: oldDoc.courseIds.length,
                 };
 
@@ -475,6 +475,10 @@ router.post(
             courseDoc.unitArr.push(unit);
             await courseDoc.save();
 
+            res.status(200).json({
+                statusText: statusText.UNIT_CREATE_SUCCESS,
+            });
+
             // console.log(courseDoc); // new = true to return the updated doc
         } catch (err) {
             console.error(err);
@@ -765,101 +769,167 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
     }
 });
 
-router.get(
-    "/users/college-names",
+router.patch(
+    "/users/reset-password/:userId",
     adminAuth,
     fetchPerson,
     isAdmin,
     async (req, res) => {
-        const { search } = req.query;
         try {
-            let collegeNames = await User.aggregate([
-                {
-                    $match: {
-                        collegeName: { $regex: new RegExp(search, "i") },
-                    },
-                },
-                {
-                    $group: {
-                        _id: "$collegeName",
-                    },
-                },
-            ]);
+            const { userId } = req.params;
+            const password = req.body.password;
 
-            collegeNames = collegeNames.map((clg) => clg?._id);
+            if (!password) {
+                return res.status(404).send({
+                    statusText: "Password not found",
+                });
+            }
 
-            // console.log("**********",collegeNames);
+            if (password === "") {
+                return res.status(404).send({
+                    statusText: "Password could not be empty",
+                });
+            }
 
-            return res
-                .status(200)
-                .json({ statusText: statusText.SUCCESS, collegeNames });
+            // changing the password for the users
+            const user = await User.findOne({
+                userId: userId,
+            });
+
+            if (!user) {
+                return res.status(404).send({
+                    statusText: "User Not Found",
+                });
+            }
+
+            user.password = password;
+            await user.save();
+
+            return res.status(200).send({
+                statusText: "Password Updated successfully",
+            });
         } catch (err) {
-            console.log(err);
-            return res.status(500).json({ statusText: statusText.FAIL });
+            return res.status(501).send({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
+        }
+    }
+);
+
+router.delete(
+    "/users/delete-user/:userId",
+    adminAuth,
+    fetchPerson,
+    isAdmin,
+    async (req, res) => {
+        try {
+            const { userId } = req.params;
+
+            let user = await User.findOne({
+                userId: userId,
+            });
+            if (!user) {
+                return res.status(404).send({
+                    statusText: "User Not Found",
+                });
+            }
+
+            await User.deleteOne({
+                userId: userId,
+            });
+
+            return res.status(200).send({
+                statusText: "User Deleted Successfully",
+            });
+        } catch (err) {
+            res.status(501).send({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
         }
     }
 );
 
 router.get(
-    "/users/:userId",
+    "/users/profile/:userId",
     adminAuth,
     fetchPerson,
     isAdmin,
     async (req, res) => {
         let { userId } = req.params;
-        if (userId == "")
-            res.status(400).json({
-                statusText: statusText.FAIL,
-                message: "userId is empty",
-            });
 
         try {
-            let user = await User.findOne({ userId });
+            let user = await User.findOne({
+                userId: userId,
+            });
+
             if (!user) {
-                return res.status(404).json({
-                    statusText: statusText.FAIL,
-                    message: "user not found",
+                return res.status(404).send({
+                    statusText: "User not found",
                 });
             }
 
-            const vertNames = await Vertical.find().select("_id name");
-            const vertMap = {};
-            const vertData = {};
-            vertNames.forEach((vert) => {
-                vertMap[vert._id] = vert.name;
-                vertData[vert.name] = 0;
-            });
-
-            let activity = user.activity;
-            for (let vertical in activity) {
-                let ct = 0;
-                for (let course in activity[vertical]) {
-                    for (let unit in activity[vertical][course]) {
-                        for (let quiz in activity[vertical][course][unit]) {
-                            const quizScore =
-                                activity[vertical][course][unit].quiz
-                                    .scoreInPercent;
-                            if (quizScore >= 60) {
-                                ct += 1;
-                            }
-                        }
-                    }
-                }
-
-                vertData[vertMap[vertical.substring(1)]] = ct;
+            if (!user.activity || user.activity == {}) {
+                return res.status(200).send({
+                    statusText: "Success",
+                    data: {
+                        user: {
+                            ...user._doc,
+                            activity: {},
+                        },
+                        allVerticalsData: [],
+                    },
+                });
             }
 
-            // remove activity from user object
-            user.activity = vertData;
+            let activity = user.activity;
 
-            return res.status(200).json({
-                statusText: statusText.SUCCESS,
-                user: { ...user._doc },
+            let allVerticalsData = [];
+            for (let vertical in activity) {
+                const id = vertical.slice(1);
+                let verticalData = await Vertical.findById(id);
+
+                let coursesData = [];
+                for (let course in activity[vertical]) {
+                    let courseId = course.slice(1);
+                    let courseData = await Course.findById(courseId);
+
+                    let unitsData = [];
+                    for (let unit in activity[vertical][course]) {
+                        let unitId = unit.slice(1);
+                        let unitData = await Course.findById(unitId);
+                        unitsData.push({
+                            ...unitData,
+                            progress: activity[vertical][course][unit],
+                        });
+                    }
+
+                    coursesData.push({
+                        courseData,
+                        unitsData,
+                    });
+                }
+
+                allVerticalsData.push({
+                    verticalData,
+                    coursesData,
+                });
+            }
+
+            return res.status(200).send({
+                statusText: "Success",
+                data: {
+                    user: {
+                        ...user._doc,
+                        activity: {},
+                    },
+                    allVerticalsData,
+                },
             });
         } catch (err) {
-            return res.status(200).json({
-                statusText: statusText.FAIL,
-                message: "Invalid userId",
+            console.log(err);
+            return res.status(500).send({
+                statusText: "Internal Server Error",
+                error: err.message,
             });
         }
     }
