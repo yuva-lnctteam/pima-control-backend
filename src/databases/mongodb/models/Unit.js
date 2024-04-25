@@ -21,7 +21,7 @@ const UnitSchema = mongoose.Schema({
         },
         vdoSrc: {
             type: String,
-            required: [true, "Video source is required"],
+            // required: [true, "Video source is required"],
             trim: true,
         },
     },
