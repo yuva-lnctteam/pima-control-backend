@@ -535,7 +535,7 @@ router.delete(
         const objectCourseId = mongoose.Types.ObjectId(courseId); // imp to convert to string to objectId
 
         try {
-            const courseDoc = await Course.findByIdAndDelete(courseId);
+            const courseDoc = await Course.findById(courseId);
             // console.log(courseDoc);
 
             if (!courseDoc) {
@@ -544,6 +544,11 @@ router.delete(
                     .json({ statusText: statusText.COURSE_NOT_FOUND });
             }
 
+            // deleting from cloudinary the image
+            await deleteFromCloudinary(courseDoc.image?.publicId);
+
+            // deleting the course
+            await Course.findByIdAndDelete(courseId);
             const verticalDoc = await Vertical.findOneAndUpdate(
                 { _id: verticalId },
                 {
@@ -902,6 +907,45 @@ router.get(
             return res.status(500).send({
                 statusText: "Internal Server Error",
                 error: err.message,
+            });
+        }
+    }
+);
+
+router.post(
+    "/upload-pdf",
+    adminAuth,
+    fetchPerson,
+    isAdmin,
+    upload.single("pdf"),
+    async (req, res) => {
+        try {
+            let pdfPath = req.file?.path;
+            if (!pdfPath) {
+                return res.status(501).json({
+                    statusText: "PDF not provided",
+                });
+            }
+
+            const pdfUploaded = await uploadOnCloudinary(pdfPath, "pdfs");
+
+            if (!pdfUploaded) {
+                return res.status(501).send({
+                    statusText: "Your file could not be uploaded.",
+                });
+            }
+
+            return res.status(200).json({
+                statusText: statusText.SUCCESS,
+                image: {
+                    url: pdfUploaded.url,
+                    publicId: pdfUploaded.public_id,
+                },
+            });
+        } catch (err) {
+            console.error(err.message);
+            res.status(500).json({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
             });
         }
     }

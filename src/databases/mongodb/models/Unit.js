@@ -25,6 +25,9 @@ const UnitSchema = mongoose.Schema({
             trim: true,
         },
     },
+    pdf: {
+        type: Object,
+    },
     image: {
         type: Object,
     },
