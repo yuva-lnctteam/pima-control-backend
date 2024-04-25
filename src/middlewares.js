@@ -275,7 +275,7 @@ const doesUnitActivityExist = async (req, res, next) => {
 
         next();
     } catch (err) {
-        console.log(err);
+        console.log("------------", err);
         res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
     }
 };
