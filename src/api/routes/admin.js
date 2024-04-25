@@ -63,18 +63,27 @@ router.post(
     }
 );
 
-router.post("/register-user", adminAuth, async (req, res) => {
-    const regisForm = req.body;
+router.post(
+    "/register-user",
+    upload.single("userImg"),
+    adminAuth,
+    async (req, res) => {
+        const regisForm = req.body;
 
-    console.log("regisForm: ", regisForm);
-    try {
-        await User.create(regisForm);
-        res.status(200).json({ statusText: statusText.REGISTRATION_SUCCESS });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
+        console.log("regisForm: ", regisForm);
+        try {
+            await User.create(regisForm);
+            res.status(200).json({
+                statusText: statusText.REGISTRATION_SUCCESS,
+            });
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({
+                statusText: statusText.INTERNAL_SERVER_ERROR,
+            });
+        }
     }
-});
+);
 //////////////////////////////////////// LOGIN ////////////////////////////////////////////////
 
 router.post("/login", adminAuth, async (req, res) => {
@@ -344,7 +353,7 @@ router.post(
                 });
             }
 
-            const courseImageUpload = await uploadOnCloudinary(
+            const courseImageUploaded = await uploadOnCloudinary(
                 courseImgPath,
                 "courses"
             );
@@ -356,8 +365,8 @@ router.post(
             }
 
             let image = {
-                src: courseImageUpload?.url,
-                publicId: courseImageUpload.public_id,
+                src: courseImageUploaded?.url,
+                publicId: courseImageUploaded.public_id,
             };
             const { verticalId } = req.params;
 
@@ -399,11 +408,12 @@ router.post(
     adminAuth,
     fetchPerson,
     isAdmin,
+    upload.single("unitImg"),
     async (req, res) => {
         // console.log(req.originalUrl);
 
         // todo : validation
-        let unit = req.body;
+
         let { courseId } = req.params;
 
         // ! manually check and add field in unit doc
@@ -432,7 +442,36 @@ router.post(
                     .json({ statusText: statusText.COURSE_NOT_FOUND });
             }
 
-            console.log("---------", courseDoc);
+            let unitimgPath = req.file?.path;
+            if (!unitimgPath) {
+                return res.status(501).json({
+                    statusText: statusText.INTERNAL_SERVER_ERROR,
+                });
+            }
+
+            const unitImgUploaded = await uploadOnCloudinary(
+                unitimgPath,
+                "units"
+            );
+
+            if (!unitImgUploaded) {
+                res.status(501).send({
+                    statusText: "Your file could not be uploaded.",
+                });
+            }
+
+            let image = {
+                src: unitImgUploaded?.url,
+                publicId: unitImgUploaded.public_id,
+            };
+            const unit = {
+                unit: req.body.unit,
+                image: image,
+            };
+
+            // console.log(unit);
+
+            // console.log("---------", courseDoc);
             courseDoc.unitArr.push(unit);
             await courseDoc.save();
 

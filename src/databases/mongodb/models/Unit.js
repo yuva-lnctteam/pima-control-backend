@@ -5,7 +5,7 @@ const UnitSchema = mongoose.Schema({
     video: {
         title: {
             type: String,
-            required: [true, "Video title is required"],
+            // required: [true, "Video title is required"],
             trim: true,
         },
         desc: {
@@ -15,14 +15,13 @@ const UnitSchema = mongoose.Schema({
         },
         vdoSrc: {
             type: String,
-            required: [true, "Video source is required"],
+            // required: [true, "Video source is required"],
             trim: true,
         },
-        image: {
-            type: Object,
-        },
     },
-
+    image: {
+        type: Object,
+    },
     activities: {
         type: Array,
         default: [],

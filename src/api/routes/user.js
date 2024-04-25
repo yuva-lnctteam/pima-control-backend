@@ -325,6 +325,7 @@ router.get(
                     name: oldDoc.name,
                     desc: oldDoc.desc,
                     unitCount: oldDoc.unitArr.length,
+                    image: oldDoc.image,
                 };
 
                 return newDoc;
@@ -382,6 +383,7 @@ router.get(
                     },
                     activityCount: oldDoc.activities.length,
                     quizCount: oldDoc.quiz.length,
+                    image: oldDoc.image,
                 };
 
                 return newDoc;
