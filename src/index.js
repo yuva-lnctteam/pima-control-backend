@@ -18,12 +18,12 @@ app.use(express.json({})); // to use req.body
 app.use(express.urlencoded({ extended: true }));
 
 // RATE LIMITER
-const limiter = rateLimit({
+/* const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // Limit each IP to 100 requests per windowMs
-});
+}); */
 
-app.use(limiter);
+// app.use(limiter);
 
 // Mine returns
 const connectToMongoDB = require("./databases/mongodb/config");
@@ -41,7 +41,6 @@ app.use("/api/public", require("./api/routes/public.js"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-
     console.log(`Server is listening at port ${PORT}`);
 
     //   createDir(vars.imageFile.ORIGINAL_UPLOADS_DIR_PATH);
