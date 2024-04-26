@@ -52,6 +52,8 @@ const getUserActivityDefaultObj = () => {
   };
 };
 
+
+
 const isRequiredUnitActivityPresent = (
   userDoc,
   verticalId,

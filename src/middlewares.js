@@ -100,6 +100,9 @@ const isEligibleToTakeQuiz = async (req, res, next) => {
   and if the userDoc contains the vId, cId, uId this means those ids are valid as other routes like
   update-progress validate them
   */
+        // fetching unit data and checking if it contains video
+
+    
         if (
             !(
                 userDoc.activity &&
