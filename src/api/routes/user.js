@@ -819,23 +819,50 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
                 },
             });
         }
-
+        
         let activity = user.activity;
+        const deletedVerticals = [];
+        const deletedCourses = [];
+        const deletedUnits = [];
+        if(Object.keys(activity).length === 0){
+            throw new Error("No Activity Data");
+        }
 
         let allVerticalsData = [];
         for (let vertical in activity) {
             const id = vertical.slice(1);
+            if(deletedVerticals.includes(id)){
+                continue;
+            }
             let verticalData = await Vertical.findById(id);
+            if(!verticalData){
+                deletedVerticals.push(id);
+                continue;
+            }
 
             let coursesData = [];
             for (let course in activity[vertical]) {
                 let courseId = course.slice(1);
+                if (deletedCourses.includes(courseId)) {
+                    continue;
+                }
                 let courseData = await Course.findById(courseId);
+                if(!courseData){
+                    deletedCourses.push(courseId);
+                    continue;
+                }
 
                 let unitsData = [];
                 for (let unit in activity[vertical][course]) {
                     let unitId = unit.slice(1);
+                    if (deletedUnits.includes(unitId)) {
+                        continue;
+                    }
                     let unitData = await Course.findById(unitId);
+                    if (!unitData) {
+                        deletedUnits.push(unitId);
+                        continue;
+                    }
                     unitsData.push({
                         ...unitData,
                         progress: activity[vertical][course][unit],
@@ -853,6 +880,23 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
                 coursesData,
             });
         }
+
+        // Clean up any deleted items from user activity
+            for (let id of deletedVerticals) {
+                delete activity['v' + id];
+            }
+            for (let courseId of deletedCourses) {
+                for (let vertical in activity) {
+                    delete activity[vertical]['c' + courseId];
+                }
+            }
+            for (let unitId of deletedUnits) {
+                for (let vertical in activity) {
+                    for (let course in activity[vertical]) {
+                        delete activity[vertical][course]['u' + unitId];
+                    }
+                }
+            }
 
         return res.status(200).send({
             statusText: "Success",
