@@ -827,8 +827,10 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
             const id = vertical.slice(1);
             let verticalData = await Vertical.findById(id)?.select("name _id");
 
-            if(!verticalData){
-                await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}`]: "" } });
+            if (!verticalData) {
+                await User.findByIdAndUpdate(req.mongoId, {
+                    $unset: { [`activity.${vertical}`]: "" },
+                });
                 continue;
             }
 
@@ -837,27 +839,35 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
                 let courseId = course.slice(1);
                 let courseData = await Course.findById(courseId);
 
-                if(!courseData){
-                    await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}`]: "" } });
+                if (!courseData) {
+                    await User.findByIdAndUpdate(req.mongoId, {
+                        $unset: { [`activity.${vertical}.${course}`]: "" },
+                    });
 
                     continue;
                 }
 
                 let unitsData = [];
                 for (let unit in activity[vertical][course]) {
-                    let unitId = unit.slice(1);            
+                    let unitId = unit.slice(1);
                     // if(!unitData){
                     //     await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
 
                     //     continue;
                     // }
-                    let unitData = courseData.unitArr.find((unit) => unit._id == unitId);
+                    let unitData = courseData.unitArr.find(
+                        (unit) => unit._id == unitId
+                    );
 
-                    if(!unitData){
-                        await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
+                    if (!unitData) {
+                        await User.findByIdAndUpdate(req.mongoId, {
+                            $unset: {
+                                [`activity.${vertical}.${course}.${unit}`]: "",
+                            },
+                        });
                         continue;
                     }
-                    
+
                     unitsData.push({
                         _id: unitId,
                         name: unitData.video.title,

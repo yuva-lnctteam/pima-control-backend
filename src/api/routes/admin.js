@@ -863,61 +863,35 @@ router.get(
             let allVerticalsData = [];
             for (let vertical in activity) {
                 const id = vertical.slice(1);
-                let verticalData = await Vertical.findById(id)?.select("name _id");
-    
-                if(!verticalData){
-                    await User.findByIdAndUpdate(userId, { $unset: { [`activity.${vertical}`]: "" } });
-                    continue;
-                }
-    
+                let verticalData = await Vertical.findById(id);
+
                 let coursesData = [];
                 for (let course in activity[vertical]) {
                     let courseId = course.slice(1);
                     let courseData = await Course.findById(courseId);
-    
-                    if(!courseData){
-                        await User.findByIdAndUpdate(userId, { $unset: { [`activity.${vertical}.${course}`]: "" } });
-    
-                        continue;
-                    }
-    
+
                     let unitsData = [];
                     for (let unit in activity[vertical][course]) {
-                        let unitId = unit.slice(1);            
-                        // if(!unitData){
-                        //     await User.findByIdAndUpdate(userId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
-    
-                        //     continue;
-                        // }
-                        let unitData = courseData.unitArr.find((unit) => unit._id == unitId);
-    
-                        if(!unitData){
-                            await User.findByIdAndUpdate(userId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
-                            continue;
-                        }
-                        
+                        let unitId = unit.slice(1);
+                        let unitData = await Course.findById(unitId);
                         unitsData.push({
-                            _id: unitId,
-                            name: unitData.video.title,
+                            ...unitData,
                             progress: activity[vertical][course][unit],
                         });
                     }
-    
+
                     coursesData.push({
-                        courseData: {
-                            _id: courseData._id,
-                            name: courseData.name,
-                        },
+                        courseData,
                         unitsData,
                     });
                 }
-    
+
                 allVerticalsData.push({
                     verticalData,
                     coursesData,
                 });
             }
-    
+
             return res.status(200).send({
                 statusText: "Success",
                 data: {
@@ -943,7 +917,7 @@ router.post(
     adminAuth,
     fetchPerson,
     isAdmin,
-    upload.single("pdf"),
+    upload.single("file"),
     async (req, res) => {
         try {
             let pdfPath = req.file?.path;
