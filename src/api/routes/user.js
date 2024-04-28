@@ -825,25 +825,51 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
         let allVerticalsData = [];
         for (let vertical in activity) {
             const id = vertical.slice(1);
-            let verticalData = await Vertical.findById(id);
+            let verticalData = await Vertical.findById(id)?.select("name _id");
+
+            if(!verticalData){
+                await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}`]: "" } });
+                continue;
+            }
 
             let coursesData = [];
             for (let course in activity[vertical]) {
                 let courseId = course.slice(1);
                 let courseData = await Course.findById(courseId);
 
+                if(!courseData){
+                    await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}`]: "" } });
+
+                    continue;
+                }
+
                 let unitsData = [];
                 for (let unit in activity[vertical][course]) {
-                    let unitId = unit.slice(1);
-                    let unitData = await Course.findById(unitId);
+                    let unitId = unit.slice(1);            
+                    // if(!unitData){
+                    //     await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
+
+                    //     continue;
+                    // }
+                    let unitData = courseData.unitArr.find((unit) => unit._id == unitId);
+
+                    if(!unitData){
+                        await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
+                        continue;
+                    }
+                    
                     unitsData.push({
-                        ...unitData,
+                        _id: unitId,
+                        name: unitData.video.title,
                         progress: activity[vertical][course][unit],
                     });
                 }
 
                 coursesData.push({
-                    courseData,
+                    courseData: {
+                        _id: courseData._id,
+                        name: courseData.name,
+                    },
                     unitsData,
                 });
             }
