@@ -32,6 +32,7 @@ const {
   isUnitIdValid,
   doesQuizExist,
   doesUnitActivityExist,
+  upload,
 } = require("../../middlewares");
 
 // My utilities
@@ -44,6 +45,7 @@ const {
   addRequiredUnitActivity,
   isRequiredUnitActivityPresent,
 } = require("../../utilities/helper_functions.js");
+const { uploadOnCloudinary, deleteFromCloudinary } = require("../../utilities/cloudinary.js");
 
 /******************** My Configs **********************/
 // Multer
@@ -142,20 +144,21 @@ router.post("/login", userAuth, async (req, res) => {
   }
 });
 
-router.put("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
+router.post("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
   const updatedDoc = req.body;
 
+  console.log(updatedDoc);
   try {
     let presentUserDoc = await User.findOne({ email: updatedDoc.email });
 
     if (presentUserDoc && presentUserDoc._id != req.mongoId) {
-        return res.status(409).json({ statusText: "Email already exists" });
+      return res.status(409).json({ statusText: "Email already exists" });
     }
 
     presentUserDoc = await User.findOne({ userId: updatedDoc.userId });
 
     if (presentUserDoc && presentUserDoc._id != req.mongoId) {
-        return res.status(409).json({ statusText: "Username already exists" });
+      return res.status(409).json({ statusText: "Username already exists" });
     }
 
     let userDoc = await User.findByIdAndUpdate(req.mongoId, updatedDoc, {
@@ -174,6 +177,64 @@ router.put("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+router.post(
+  "/edit-profile-pic",
+  userAuth,
+  fetchPerson,
+  isUser,
+  upload.single("userImg"),
+  async (req, res) => {
+    const mongoId = req.mongoId;
+
+    try {
+      let user = await User.findById(mongoId);
+      
+    //   console.log(user)
+      if (!user) {
+        return res.status(404).json({ statusText: "User not found" });
+      }
+
+      // delete old image from cloudinary
+      if (user.image.publicId) {
+        await deleteFromCloudinary(user.image.publicId);
+      }
+
+      let userImgPath = req.file?.path;
+      if (!userImgPath) {
+        return res.status(501).json({
+          statusText: statusText.INTERNAL_SERVER_ERROR,
+        });
+      }
+
+      const userImg = await uploadOnCloudinary(userImgPath, "users");
+
+      if (!userImg) {
+        res.status(501).send({
+          statusText: "Your file could not be uploaded.",
+        });
+      }
+
+      let image = {
+        src: userImg?.url,
+        publicId: userImg.public_id,
+      };
+
+      let updatedUser = await User.findByIdAndUpdate(
+        mongoId,
+        { image },
+        { new: true }
+      );
+
+      res
+        .status(200)
+        .json({ statusText: "Profile pic updated", userDoc: updatedUser });
+    } catch (err) {
+        console.log(err.message);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+  }
+);
 
 router.post(
   "/reset-password",
