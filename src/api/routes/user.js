@@ -254,23 +254,6 @@ router.post(
   }
 );
 
-router.post("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
-  // console.log(req.originalUrl);
-  const updatedDoc = req.body;
-  console.log(updatedDoc);
-  try {
-    const userDoc = await User.findByIdAndUpdate(req.mongoId, updatedDoc, {
-      new: true,
-    });
-    return res
-      .status(200)
-      .json({ statusText: statusText.VERIFIED_TOKEN, userDoc: userDoc });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
-  }
-});
-
 //!TO DELETE
 // router.get("/add-data", async (req, res)=>{
 //     const allUsers = await User.find();
