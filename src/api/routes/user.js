@@ -19,30 +19,30 @@ const userId = process.env.userId;
 const userPassword = process.env.userPassword;
 
 const userAuth = basicAuth({
-    users: { [userId]: userPassword },
-    challenge: true,
-    unauthorizedResponse: "Unauthorized",
+  users: { [userId]: userPassword },
+  challenge: true,
+  unauthorizedResponse: "Unauthorized",
 });
 
 // My middlewares
 const {
-    fetchPerson,
-    isUser,
-    isEligibleToTakeQuiz,
-    isUnitIdValid,
-    doesQuizExist,
-    doesUnitActivityExist,
+  fetchPerson,
+  isUser,
+  isEligibleToTakeQuiz,
+  isUnitIdValid,
+  doesQuizExist,
+  doesUnitActivityExist,
 } = require("../../middlewares");
 
 // My utilities
 const statusText = require("../../utilities/status_text.js");
 const { vars } = require("../../utilities/constants.js");
 const {
-    encodeCertificateId,
-    generateFirebasePublicURL,
-    // getUserActivityDefaultObj,
-    addRequiredUnitActivity,
-    isRequiredUnitActivityPresent,
+  encodeCertificateId,
+  generateFirebasePublicURL,
+  // getUserActivityDefaultObj,
+  addRequiredUnitActivity,
+  isRequiredUnitActivityPresent,
 } = require("../../utilities/helper_functions.js");
 
 /******************** My Configs **********************/
@@ -93,149 +93,182 @@ const {
 
 // Since main portal in the register form has no input field for username, username by default is email, and it can also login from email or username both. So here, we have to also handle case where user don't have username and wants to login. "Allow login with email also".
 router.post("/login", userAuth, async (req, res) => {
-    // console.log("login request received: ", req.body);
-    // todo : validation
-    // console.log(req.originalUrl);
-    // console.log(req.body);
+  // console.log("login request received: ", req.body);
+  // todo : validation
+  // console.log(req.originalUrl);
+  // console.log(req.body);
 
-    //userId can be email too....
-    let userIdOrEmail = req.body.userId; // mongo works even if userId and pass are empty, undefined, or null
-    let enteredPassword = req.body.password;
+  //userId can be email too....
+  let userIdOrEmail = req.body.userId; // mongo works even if userId and pass are empty, undefined, or null
+  let enteredPassword = req.body.password;
 
-    try {
-        //!new
-        //* Find the user in Portal's DB, if present just match the password and login, no need to access main portal's API.
-        //* Special case handled below, if the user's password is changed later on the Yuva Portal, and main portal had not updated the password.
+  try {
+    //!new
+    //* Find the user in Portal's DB, if present just match the password and login, no need to access main portal's API.
+    //* Special case handled below, if the user's password is changed later on the Yuva Portal, and main portal had not updated the password.
 
-        let userDoc1 = await User.findOne({
-            $or: [{ userId: userIdOrEmail }, { email: userIdOrEmail }],
-        });
+    let userDoc1 = await User.findOne({
+      $or: [{ userId: userIdOrEmail }, { email: userIdOrEmail }],
+    });
 
-        if (!userDoc1) {
-            return res.status(404).json({ statusText: "User Not Found" });
-        }
-
-        if (userDoc1.password !== enteredPassword) {
-            return res.status(401).json({ statusText: "Incorrect Password" });
-        }
-
-        console.log(userDoc1);
-        //Generate token and login
-        const data1 = {
-            exp: Math.floor(Date.now() / 1000) + vars.token.expiry.USER_IN_SEC,
-            person: {
-                mongoId: userDoc1._id,
-                role: "user",
-            },
-        };
-
-        const token1 = jwt.sign(data1, process.env.JWT_SECRET);
-
-        return res.status(200).json({
-            statusText: statusText.LOGIN_IN_SUCCESS,
-            token: token1,
-        });
-    } catch (err) {
-        console.log(err.message);
-
-        res.status(500).json({ error: statusText.INTERNAL_SERVER_ERROR });
+    if (!userDoc1) {
+      return res.status(404).json({ statusText: "User Not Found" });
     }
+
+    if (userDoc1.password !== enteredPassword) {
+      return res.status(401).json({ statusText: "Incorrect Password" });
+    }
+
+    console.log(userDoc1);
+    //Generate token and login
+    const data1 = {
+      exp: Math.floor(Date.now() / 1000) + vars.token.expiry.USER_IN_SEC,
+      person: {
+        mongoId: userDoc1._id,
+        role: "user",
+      },
+    };
+
+    const token1 = jwt.sign(data1, process.env.JWT_SECRET);
+
+    return res.status(200).json({
+      statusText: statusText.LOGIN_IN_SUCCESS,
+      token: token1,
+    });
+  } catch (err) {
+    console.log(err.message);
+
+    res.status(500).json({ error: statusText.INTERNAL_SERVER_ERROR });
+  }
+});
+
+router.put("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
+  const updatedDoc = req.body;
+
+  try {
+    let presentUserDoc = await User.findOne({ email: updatedDoc.email });
+
+    if (presentUserDoc && presentUserDoc._id != req.mongoId) {
+        return res.status(409).json({ statusText: "Email already exists" });
+    }
+
+    presentUserDoc = await User.findOne({ userId: updatedDoc.userId });
+
+    if (presentUserDoc && presentUserDoc._id != req.mongoId) {
+        return res.status(409).json({ statusText: "Username already exists" });
+    }
+
+    let userDoc = await User.findByIdAndUpdate(req.mongoId, updatedDoc, {
+      new: true,
+    });
+
+    if (!userDoc) {
+      return res.status(404).json({ statusText: "User not found" });
+    }
+
+    return res
+      .status(200)
+      .json({ statusText: "Profile updated", userDoc: userDoc });
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 router.post(
-    "/reset-password",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        // user is already logged in, so we dont need userId
-        // console.log(req.originalUrl);
+  "/reset-password",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    // user is already logged in, so we dont need userId
+    // console.log(req.originalUrl);
 
-        const { currPassword, newPassword } = req.body;
-        const mongoId = req.mongoId;
+    const { currPassword, newPassword } = req.body;
+    const mongoId = req.mongoId;
 
-        try {
-            const userDoc = await User.findById(mongoId);
+    try {
+      const userDoc = await User.findById(mongoId);
 
-            if (userDoc.isPassReset) {
-                return res.status(403).json({
-                    statusText: statusText.PASS_RESET_ALREADY,
-                    isPassReset: true,
-                });
-            }
+      if (userDoc.isPassReset) {
+        return res.status(403).json({
+          statusText: statusText.PASS_RESET_ALREADY,
+          isPassReset: true,
+        });
+      }
 
-            // const hashedPassword = userDoc.password;
-            // const passwordCompare = await bcrypt.compare(
-            //   currPassword,
-            //   hashedPassword
-            // );
+      // const hashedPassword = userDoc.password;
+      // const passwordCompare = await bcrypt.compare(
+      //   currPassword,
+      //   hashedPassword
+      // );
 
-            // if (!passwordCompare) {
-            //   return res.status(401).json({
-            //     statusText: statusText.CURRENT_PASS_INCORRECT,
-            //     isCurrPasswordIncorrect: true,
-            //   });
-            // }
+      // if (!passwordCompare) {
+      //   return res.status(401).json({
+      //     statusText: statusText.CURRENT_PASS_INCORRECT,
+      //     isCurrPasswordIncorrect: true,
+      //   });
+      // }
 
-            // const salt = await bcrypt.genSalt(10);
-            // const newHashedPassword = await bcrypt.hash(newPassword, salt);
+      // const salt = await bcrypt.genSalt(10);
+      // const newHashedPassword = await bcrypt.hash(newPassword, salt);
 
-            await User.findByIdAndUpdate(
-                mongoId,
-                { password: newPassword, isPassReset: true },
-                { overwrite: false }
-            );
+      await User.findByIdAndUpdate(
+        mongoId,
+        { password: newPassword, isPassReset: true },
+        { overwrite: false }
+      );
 
-            res.status(200).json({ statusText: statusText.PASS_RESET_SUCCESS });
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
-        }
+      res.status(200).json({ statusText: statusText.PASS_RESET_SUCCESS });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 router.post(
-    "/verify-token",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        // console.log(req.originalUrl);
+  "/verify-token",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    // console.log(req.originalUrl);
 
-        try {
-            const userDoc = await User.findById(req.mongoId)
-                .select("-_id -password -activity")
-                .exec();
-            return res.status(200).json({
-                statusText: statusText.VERIFIED_TOKEN,
-                userDoc: userDoc,
-            });
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
-        }
+    try {
+      const userDoc = await User.findById(req.mongoId)
+        .select("-_id -password -activity")
+        .exec();
+      return res.status(200).json({
+        statusText: statusText.VERIFIED_TOKEN,
+        userDoc: userDoc,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 router.post("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
-    // console.log(req.originalUrl);
-    const updatedDoc = req.body;
-    console.log(updatedDoc);
-    try {
-        const userDoc = await User.findByIdAndUpdate(req.mongoId, updatedDoc, {
-            new: true,
-        });
-        return res
-            .status(200)
-            .json({ statusText: statusText.VERIFIED_TOKEN, userDoc: userDoc });
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
-    }
+  // console.log(req.originalUrl);
+  const updatedDoc = req.body;
+  console.log(updatedDoc);
+  try {
+    const userDoc = await User.findByIdAndUpdate(req.mongoId, updatedDoc, {
+      new: true,
+    });
+    return res
+      .status(200)
+      .json({ statusText: statusText.VERIFIED_TOKEN, userDoc: userDoc });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ statusText: statusText.INTERNAL_SERVER_ERROR });
+  }
 });
 
 //!TO DELETE
@@ -265,143 +298,143 @@ router.post("/update-user", userAuth, fetchPerson, isUser, async (req, res) => {
 
 // ! validated
 router.get("/verticals/all", userAuth, async (req, res) => {
-    // todo: verify role, reason: a student can paste the url on browser and potray himself as an admin
-    // console.log(req.originalUrl);
+  // todo: verify role, reason: a student can paste the url on browser and potray himself as an admin
+  // console.log(req.originalUrl);
 
-    try {
-        let allVerticals = await Vertical.find();
-        // console.log(allVerticals);
+  try {
+    let allVerticals = await Vertical.find();
+    // console.log(allVerticals);
 
-        allVerticals = allVerticals.map((oldDoc) => {
-            const newDoc = {
-                _id: oldDoc._id,
-                name: oldDoc.name,
-                desc: oldDoc.desc,
-                image: oldDoc.image,
-                courseCount: oldDoc.courseIds.length,
-                // certUnlocked: oldDoc.certUnlocked ? oldDoc.certUnlocked : 0,
-            };
+    allVerticals = allVerticals.map((oldDoc) => {
+      const newDoc = {
+        _id: oldDoc._id,
+        name: oldDoc.name,
+        desc: oldDoc.desc,
+        image: oldDoc.image,
+        courseCount: oldDoc.courseIds.length,
+        // certUnlocked: oldDoc.certUnlocked ? oldDoc.certUnlocked : 0,
+      };
 
-            return newDoc;
-        });
+      return newDoc;
+    });
 
-        // console.log(allVerticals);
+    // console.log(allVerticals);
 
-        res.status(200).json({
-            statusText: statusText.SUCCESS,
-            allVerticals: allVerticals,
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ statusText: statusText.FAIL });
-    }
+    res.status(200).json({
+      statusText: statusText.SUCCESS,
+      allVerticals: allVerticals,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ statusText: statusText.FAIL });
+  }
 });
 
 //! validated
 router.get(
-    "/verticals/:verticalId/courses/all",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        const { verticalId } = req.params;
+  "/verticals/:verticalId/courses/all",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    const { verticalId } = req.params;
 
-        try {
-            const verticalDoc = await Vertical.findById(verticalId);
-            // console.log(verticalDoc);
+    try {
+      const verticalDoc = await Vertical.findById(verticalId);
+      // console.log(verticalDoc);
 
-            if (!verticalDoc) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.VERTICAL_NOT_FOUND });
-            }
+      if (!verticalDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.VERTICAL_NOT_FOUND });
+      }
 
-            let allCourses = await Course.find({
-                _id: { $in: verticalDoc.courseIds },
-            });
+      let allCourses = await Course.find({
+        _id: { $in: verticalDoc.courseIds },
+      });
 
-            allCourses = allCourses.map((oldDoc) => {
-                const newDoc = {
-                    _id: oldDoc._id,
-                    name: oldDoc.name,
-                    desc: oldDoc.desc,
-                    unitCount: oldDoc.unitArr.length,
-                    image: oldDoc.image,
-                };
+      allCourses = allCourses.map((oldDoc) => {
+        const newDoc = {
+          _id: oldDoc._id,
+          name: oldDoc.name,
+          desc: oldDoc.desc,
+          unitCount: oldDoc.unitArr.length,
+          image: oldDoc.image,
+        };
 
-                return newDoc;
-            });
+        return newDoc;
+      });
 
-            // console.log(allCourses.length);
+      // console.log(allCourses.length);
 
-            res.status(200).json({
-                statusText: statusText.SUCCESS,
-                allCourses: allCourses,
-                verticalDoc: { name: verticalDoc.name, desc: verticalDoc.desc },
-            });
-        } catch (err) {
-            // console.log(err);
-            res.status(500).json({ statusText: statusText.FAIL });
-        }
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        allCourses: allCourses,
+        verticalDoc: { name: verticalDoc.name, desc: verticalDoc.desc },
+      });
+    } catch (err) {
+      // console.log(err);
+      res.status(500).json({ statusText: statusText.FAIL });
     }
+  }
 );
 
 // ! validated
 router.get(
-    "/verticals/:verticalId/courses/:courseId/units/all",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        const { courseId } = req.params;
+  "/verticals/:verticalId/courses/:courseId/units/all",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    const { courseId } = req.params;
 
-        try {
-            const courseProj = {
-                name: 1,
-                desc: 1,
-                unitArr: 1,
-                _id: 0,
-            };
+    try {
+      const courseProj = {
+        name: 1,
+        desc: 1,
+        unitArr: 1,
+        _id: 0,
+      };
 
-            const courseDoc = await Course.findById(courseId, courseProj);
+      const courseDoc = await Course.findById(courseId, courseProj);
 
-            if (!courseDoc) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.COURSE_NOT_FOUND });
-            }
+      if (!courseDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.COURSE_NOT_FOUND });
+      }
 
-            // console.log(courseDoc);
+      // console.log(courseDoc);
 
-            let allUnits = courseDoc.unitArr;
-            allUnits = allUnits.map((oldDoc) => {
-                const newDoc = {
-                    _id: oldDoc._id,
-                    video: {
-                        title: oldDoc.video.title,
-                        desc: oldDoc.video.desc,
-                        vdoSrc: oldDoc.video.vdoSrc,
-                    },
-                    activityCount: oldDoc.activities.length,
-                    quizCount: oldDoc.quiz.length,
-                    image: oldDoc.image,
-                };
+      let allUnits = courseDoc.unitArr;
+      allUnits = allUnits.map((oldDoc) => {
+        const newDoc = {
+          _id: oldDoc._id,
+          video: {
+            title: oldDoc.video.title,
+            desc: oldDoc.video.desc,
+            vdoSrc: oldDoc.video.vdoSrc,
+          },
+          activityCount: oldDoc.activities.length,
+          quizCount: oldDoc.quiz.length,
+          image: oldDoc.image,
+        };
 
-                return newDoc;
-            });
+        return newDoc;
+      });
 
-            res.status(200).json({
-                statusText: statusText.SUCCESS,
-                allUnits: allUnits,
-                courseInfo: { name: courseDoc.name, desc: courseDoc.desc },
-            });
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
-        }
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        allUnits: allUnits,
+        courseInfo: { name: courseDoc.name, desc: courseDoc.desc },
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -436,170 +469,158 @@ router.get(
 // );
 
 router.get(
-    "/verticals/:verticalId/courses/:courseId/units/:unitId",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        // todo : validation
-        // console.log(req.originalUrl);
+  "/verticals/:verticalId/courses/:courseId/units/:unitId",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    // todo : validation
+    // console.log(req.originalUrl);
 
-        const { verticalId, courseId, unitId } = req.params;
-        const mongoId = req.mongoId;
-        // console.log(mongoId);
+    const { verticalId, courseId, unitId } = req.params;
+    const mongoId = req.mongoId;
+    // console.log(mongoId);
 
-        try {
-            // find course and then the required unit from the unitArr of that course
-            const courseProj = {
-                name: 1,
-                unitArr: 1,
-            };
+    try {
+      // find course and then the required unit from the unitArr of that course
+      const courseProj = {
+        name: 1,
+        unitArr: 1,
+      };
 
-            const courseDoc = await Course.findById(courseId, courseProj);
+      const courseDoc = await Course.findById(courseId, courseProj);
 
-            if (!courseDoc) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.COURSE_NOT_FOUND });
-            }
+      if (!courseDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.COURSE_NOT_FOUND });
+      }
 
-            let unit = null;
-            courseDoc.unitArr.forEach((singleUnit) => {
-                if (singleUnit._id == unitId) {
-                    unit = singleUnit;
-                }
-            });
+      let unit = null;
+      courseDoc.unitArr.forEach((singleUnit) => {
+        if (singleUnit._id == unitId) {
+          unit = singleUnit;
+        }
+      });
 
-            const userProj = {
-                fName: 1,
-                mName: 1,
-                lName: 1,
-                activity: 1,
-            };
+      const userProj = {
+        fName: 1,
+        mName: 1,
+        lName: 1,
+        activity: 1,
+      };
 
-            // find user doc and decide whether user is eligible to take quiz  or get certificate
-            // cannot use eligible-middleware here because if he is not eligible then we just need to disable btn and display the page too, in other pages we redirect
+      // find user doc and decide whether user is eligible to take quiz  or get certificate
+      // cannot use eligible-middleware here because if he is not eligible then we just need to disable btn and display the page too, in other pages we redirect
 
-            const userDoc = await User.findById(mongoId, userProj);
+      const userDoc = await User.findById(mongoId, userProj);
 
-            // console.log(userDoc);
+      // console.log(userDoc);
 
-            let isEligibleToTakeQuiz = false;
-            // let isCertGenerated = false;
+      let isEligibleToTakeQuiz = false;
+      // let isCertGenerated = false;
 
-            /* 
+      /* 
             we dont want to put values in isEligibleToTakeQuiz, isCertGenerated by comparing with default values 
             like scoreInPercent which is -1, because what to keep as default values might change in the future
             */
-            if (
-                isRequiredUnitActivityPresent(
-                    userDoc,
-                    verticalId,
-                    courseId,
-                    unitId
-                )
-            ) {
-                const unitActivity =
-                    userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                        `u${unitId}`
-                    ];
+      if (
+        isRequiredUnitActivityPresent(userDoc, verticalId, courseId, unitId)
+      ) {
+        const unitActivity =
+          userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`];
 
-                isEligibleToTakeQuiz =
-                    unitActivity.video.watchTimeInPercent >=
-                    vars.activity.MIN_WATCH_TIME_IN_PERCENT;
-            } else {
-                // add default unit activity field to the user doc
-                addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
-                if (!unit.video.vdoSrc || unit.video.vdoSrc === "") {
-                    userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                        `u${unitId}`
-                    ].video.watchTimeInPercent = 100;
-                    isEligibleToTakeQuiz = true;
-                }
-
-                await User.findByIdAndUpdate(mongoId, {
-                    activity: userDoc.activity,
-                });
-            }
-            // console.log("isCertGenerated: ", isCertGenerated);
-
-            // we need courseInfo and userInfo for the "Get certificate button" which redirects on the cert's url and url contains courseId, unitId, userId
-            // const certId = encodeCertificateId(
-            //   userDoc._id,
-            //   verticalId,
-            //   courseDoc._id,
-            //   unit._id
-            // );
-            // console.log(certId);
-
-            const unitActivity =
-                userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                    `u${unitId}`
-                ];
-
-            const storedWatchPercentage = unitActivity.video.watchTimeInPercent;
-            // console.log("storedWatchPercentage: ", storedWatchPercentage);
-            res.status(200).json({
-                statusText: statusText.SUCCESS,
-                // certId: certId,
-                unit: unit,
-                isEligibleToTakeQuiz: isEligibleToTakeQuiz,
-                // isCertGenerated: isCertGenerated,
-                storedWatchPercentage: storedWatchPercentage,
-                videoWatchTimeCutoffPercentage:
-                    vars.activity.MIN_WATCH_TIME_IN_PERCENT,
-            });
-        } catch (err) {
-            console.log(err);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
+        isEligibleToTakeQuiz =
+          unitActivity.video.watchTimeInPercent >=
+          vars.activity.MIN_WATCH_TIME_IN_PERCENT;
+      } else {
+        // add default unit activity field to the user doc
+        addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
+        if (!unit.video.vdoSrc || unit.video.vdoSrc === "") {
+          userDoc.activity[`v${verticalId}`][`c${courseId}`][
+            `u${unitId}`
+          ].video.watchTimeInPercent = 100;
+          isEligibleToTakeQuiz = true;
         }
+
+        await User.findByIdAndUpdate(mongoId, {
+          activity: userDoc.activity,
+        });
+      }
+      // console.log("isCertGenerated: ", isCertGenerated);
+
+      // we need courseInfo and userInfo for the "Get certificate button" which redirects on the cert's url and url contains courseId, unitId, userId
+      // const certId = encodeCertificateId(
+      //   userDoc._id,
+      //   verticalId,
+      //   courseDoc._id,
+      //   unit._id
+      // );
+      // console.log(certId);
+
+      const unitActivity =
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`];
+
+      const storedWatchPercentage = unitActivity.video.watchTimeInPercent;
+      // console.log("storedWatchPercentage: ", storedWatchPercentage);
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        // certId: certId,
+        unit: unit,
+        isEligibleToTakeQuiz: isEligibleToTakeQuiz,
+        // isCertGenerated: isCertGenerated,
+        storedWatchPercentage: storedWatchPercentage,
+        videoWatchTimeCutoffPercentage: vars.activity.MIN_WATCH_TIME_IN_PERCENT,
+      });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 //! MAJOR CHANGE: Now the watch percentage we get from client is the overall total percentage instead of add on
 router.post(
-    "/verticals/:verticalId/courses/:courseId/units/:unitId/video/update-progress",
-    userAuth,
-    fetchPerson,
-    isUser,
-    isUnitIdValid,
-    async (req, res) => {
-        try {
-            const { verticalId, courseId, unitId } = req.params;
-            const { vdoWatchTimeInPercent } = req.body;
-            // console.log(vdoWatchTimeInPercent);
-            // console.log("vdoWatchTimeInPercent: ", vdoWatchTimeInPercent);
-            const mongoId = req.mongoId;
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/video/update-progress",
+  userAuth,
+  fetchPerson,
+  isUser,
+  isUnitIdValid,
+  async (req, res) => {
+    try {
+      const { verticalId, courseId, unitId } = req.params;
+      const { vdoWatchTimeInPercent } = req.body;
+      // console.log(vdoWatchTimeInPercent);
+      // console.log("vdoWatchTimeInPercent: ", vdoWatchTimeInPercent);
+      const mongoId = req.mongoId;
 
-            const userDoc = await User.findById(mongoId);
+      const userDoc = await User.findById(mongoId);
 
-            addRequiredUnitActivity(userDoc, verticalId, courseId, unitId); // adds only if not present
+      addRequiredUnitActivity(userDoc, verticalId, courseId, unitId); // adds only if not present
 
-            const unitActivity =
-                userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                    `u${unitId}`
-                ];
-            // unitActivity is a reference var to userDoc.activity[vKey][ckey][uKey]
+      const unitActivity =
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`];
+      // unitActivity is a reference var to userDoc.activity[vKey][ckey][uKey]
 
-            // newPercent = oldPercent + latest(current)
-            // unitActivity.video.watchTimeInPercent += vdoWatchTimeInPercent; // this line updates userDoc
-            //! Point where the major change occurs
-            unitActivity.video.watchTimeInPercent = vdoWatchTimeInPercent; // this line updates userDoc
+      // newPercent = oldPercent + latest(current)
+      // unitActivity.video.watchTimeInPercent += vdoWatchTimeInPercent; // this line updates userDoc
+      //! Point where the major change occurs
+      unitActivity.video.watchTimeInPercent = vdoWatchTimeInPercent; // this line updates userDoc
 
-            const updatedDoc = await User.findByIdAndUpdate(mongoId, userDoc, {
-                new: true,
-            });
+      const updatedDoc = await User.findByIdAndUpdate(mongoId, userDoc, {
+        new: true,
+      });
 
-            res.status(200).json({ statusText: statusText.SUCCESS });
-        } catch (err) {
-            console.log(err.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
-        }
+      res.status(200).json({ statusText: statusText.SUCCESS });
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 /***
@@ -608,305 +629,291 @@ router.post(
  * ! in such a case frontend quiz page will handle it on its own
  */
 router.get(
-    "/verticals/:verticalId/courses/:courseId/units/:unitId/quiz",
-    userAuth,
-    fetchPerson,
-    isUser,
-    async (req, res) => {
-        try {
-            const { verticalId, courseId, unitId } = req.params;
-            const mongoId = req.mongoId;
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/quiz",
+  userAuth,
+  fetchPerson,
+  isUser,
+  async (req, res) => {
+    try {
+      const { verticalId, courseId, unitId } = req.params;
+      const mongoId = req.mongoId;
 
-            // first validate vId,cId,uId, then check quiz exists, then check isEligibleToTakeQuiz
+      // first validate vId,cId,uId, then check quiz exists, then check isEligibleToTakeQuiz
 
-            // imp to validate verticalId as its included in the activity object
-            const verticalProj = {
-                _id: 1,
-            };
+      // imp to validate verticalId as its included in the activity object
+      const verticalProj = {
+        _id: 1,
+      };
 
-            const verticalDoc = await Vertical.findById(
-                verticalId,
-                verticalProj
-            );
+      const verticalDoc = await Vertical.findById(verticalId, verticalProj);
 
-            if (!verticalDoc) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.RESOURCE_NOT_FOUND });
-            }
+      if (!verticalDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.RESOURCE_NOT_FOUND });
+      }
 
-            // validate cId
-            const courseProj = {
-                _id: 0,
-                unitArr: 1,
-            };
+      // validate cId
+      const courseProj = {
+        _id: 0,
+        unitArr: 1,
+      };
 
-            const courseDoc = await Course.findById(courseId, courseProj);
+      const courseDoc = await Course.findById(courseId, courseProj);
 
-            if (!courseDoc) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.RESOURCE_NOT_FOUND });
-            }
+      if (!courseDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.RESOURCE_NOT_FOUND });
+      }
 
-            // console.log(courseDoc.unitArr.length);
+      // console.log(courseDoc.unitArr.length);
 
-            // validate uId
-            let unitDoc = null;
-            courseDoc.unitArr.forEach((currUnit) => {
-                if (currUnit._id.toString() === unitId) {
-                    unitDoc = currUnit;
-                }
-            });
-
-            // check if quiz exists
-            if (!(unitDoc && unitDoc.quiz && unitDoc.quiz.length > 0)) {
-                return res
-                    .status(404)
-                    .json({ statusText: statusText.RESOURCE_NOT_FOUND });
-            }
-
-            let userProj = {
-                _id: 0,
-                activity: 1,
-            };
-
-            const userDoc = await User.findById(mongoId, userProj);
-            addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
-
-            // check if user is eligible to take quiz
-            const unitActivity =
-                userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                    `u${unitId}`
-                ];
-
-            if (!unitDoc.video.vdoSrc || unitDoc.video.vdoSrc === "") {
-                return res.status(200).json({
-                    statusText: statusText.SUCCESS,
-                    quiz: unitDoc.quiz,
-                    isEligibleToTakeQuiz: true,
-                    quizScoreInPercent: unitActivity.quiz.scoreInPercent,
-                });
-            }
-
-            if (
-                unitActivity.video.watchTimeInPercent <
-                vars.activity.MIN_WATCH_TIME_IN_PERCENT
-            ) {
-                return res.status(403).json({
-                    statusText: statusText.NOT_ELIGIBLE_TO_TAKE_QUIZ,
-                });
-            }
-
-            res.status(200).json({
-                statusText: statusText.SUCCESS,
-                quiz: unitDoc.quiz,
-                isEligibleToTakeQuiz: true,
-                quizScoreInPercent: unitActivity.quiz.scoreInPercent,
-            });
-        } catch (err) {
-            console.log(err.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
+      // validate uId
+      let unitDoc = null;
+      courseDoc.unitArr.forEach((currUnit) => {
+        if (currUnit._id.toString() === unitId) {
+          unitDoc = currUnit;
         }
+      });
+
+      // check if quiz exists
+      if (!(unitDoc && unitDoc.quiz && unitDoc.quiz.length > 0)) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.RESOURCE_NOT_FOUND });
+      }
+
+      let userProj = {
+        _id: 0,
+        activity: 1,
+      };
+
+      const userDoc = await User.findById(mongoId, userProj);
+      addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
+
+      // check if user is eligible to take quiz
+      const unitActivity =
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`];
+
+      if (!unitDoc.video.vdoSrc || unitDoc.video.vdoSrc === "") {
+        return res.status(200).json({
+          statusText: statusText.SUCCESS,
+          quiz: unitDoc.quiz,
+          isEligibleToTakeQuiz: true,
+          quizScoreInPercent: unitActivity.quiz.scoreInPercent,
+        });
+      }
+
+      if (
+        unitActivity.video.watchTimeInPercent <
+        vars.activity.MIN_WATCH_TIME_IN_PERCENT
+      ) {
+        return res.status(403).json({
+          statusText: statusText.NOT_ELIGIBLE_TO_TAKE_QUIZ,
+        });
+      }
+
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        quiz: unitDoc.quiz,
+        isEligibleToTakeQuiz: true,
+        quizScoreInPercent: unitActivity.quiz.scoreInPercent,
+      });
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 router.post(
-    "/verticals/:verticalId/courses/:courseId/units/:unitId/quiz/submit",
-    userAuth,
-    fetchPerson,
-    isUser,
-    doesQuizExist,
-    isEligibleToTakeQuiz,
-    async (req, res) => {
-        try {
-            const { verticalId, courseId, unitId } = req.params;
-            const { quizScoreInPercent } = req.body;
-            const mongoId = req.mongoId;
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/quiz/submit",
+  userAuth,
+  fetchPerson,
+  isUser,
+  doesQuizExist,
+  isEligibleToTakeQuiz,
+  async (req, res) => {
+    try {
+      const { verticalId, courseId, unitId } = req.params;
+      const { quizScoreInPercent } = req.body;
+      const mongoId = req.mongoId;
 
-            const userDoc = await User.findById(mongoId);
+      const userDoc = await User.findById(mongoId);
 
-            addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
+      addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
 
-            // always update by creating a new doc for activity out of the previous one
+      // always update by creating a new doc for activity out of the previous one
 
-            // check cutoff on quiz submit only, the user can always see the quiz page (except watchtime criteria)
-            let hasPassedQuiz = false;
-            let hasPassedQuizFirstTime = false;
-            const unitActivity =
-                userDoc.activity[`v${verticalId}`][`c${courseId}`][
-                    `u${unitId}`
-                ];
-            // we are sure unitActivity exists as the isEligibleToTakeQuiz middleware is satisfied
+      // check cutoff on quiz submit only, the user can always see the quiz page (except watchtime criteria)
+      let hasPassedQuiz = false;
+      let hasPassedQuizFirstTime = false;
+      const unitActivity =
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`];
+      // we are sure unitActivity exists as the isEligibleToTakeQuiz middleware is satisfied
 
-            if (
-                unitActivity.quiz.scoreInPercent <
-                vars.activity.QUIZ_CUT_OFF_IN_PERCENT
-            ) {
-                // user hasn't passed quiz before, now only we can update the score
+      if (
+        unitActivity.quiz.scoreInPercent < vars.activity.QUIZ_CUT_OFF_IN_PERCENT
+      ) {
+        // user hasn't passed quiz before, now only we can update the score
 
-                // update the score
-                unitActivity.quiz = {
-                    scoreInPercent: quizScoreInPercent,
-                    passingDate: new Date().toISOString(),
-                };
+        // update the score
+        unitActivity.quiz = {
+          scoreInPercent: quizScoreInPercent,
+          passingDate: new Date().toISOString(),
+        };
 
-                if (
-                    quizScoreInPercent >=
-                    vars.activity.CERTIFICATE_GENERATION_CUT_OFF_IN_PERCENT
-                ) {
-                    hasPassedQuiz = true;
-                    hasPassedQuizFirstTime = true;
-                    // increase number of cert unlocked for this vertical by one
+        if (
+          quizScoreInPercent >=
+          vars.activity.CERTIFICATE_GENERATION_CUT_OFF_IN_PERCENT
+        ) {
+          hasPassedQuiz = true;
+          hasPassedQuizFirstTime = true;
+          // increase number of cert unlocked for this vertical by one
 
-                    // await Vertical.findByIdAndUpdate(verticalId, { //certificate unlock count in mongo
-                    //   $inc: { certUnlocked: 1 },
-                    // });
-                }
-
-                const updatedDoc = await User.findByIdAndUpdate(
-                    mongoId,
-                    userDoc,
-                    {
-                        new: true,
-                    }
-                );
-
-                // console.log(updatedDoc);
-            } else {
-                // user has passed quiz before
-                hasPassedQuiz = true;
-                // console.log("Quiz passed already, no update in score");
-            }
-
-            // console.log(hasPassedQuiz, hasPassedQuizFirstTime);
-
-            res.status(200).json({
-                statusText: statusText.SUCCESS,
-                hasPassedQuiz: hasPassedQuiz,
-                hasPassedQuizFirstTime: hasPassedQuizFirstTime,
-            });
-        } catch (err) {
-            console.log(err.message);
-            res.status(500).json({
-                statusText: statusText.INTERNAL_SERVER_ERROR,
-            });
+          // await Vertical.findByIdAndUpdate(verticalId, { //certificate unlock count in mongo
+          //   $inc: { certUnlocked: 1 },
+          // });
         }
+
+        const updatedDoc = await User.findByIdAndUpdate(mongoId, userDoc, {
+          new: true,
+        });
+
+        // console.log(updatedDoc);
+      } else {
+        // user has passed quiz before
+        hasPassedQuiz = true;
+        // console.log("Quiz passed already, no update in score");
+      }
+
+      // console.log(hasPassedQuiz, hasPassedQuizFirstTime);
+
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        hasPassedQuiz: hasPassedQuiz,
+        hasPassedQuizFirstTime: hasPassedQuizFirstTime,
+      });
+    } catch (err) {
+      console.log(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
+  }
 );
 
 router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
-    try {
-        let user = await User.findById(req.mongoId);
+  try {
+    let user = await User.findById(req.mongoId);
 
-        if (!user) {
-            return res.status(404).send({
-                statusText: "User not found",
-            });
-        }
-
-        if (!user.activity || user.activity == {}) {
-            return res.status(200).send({
-                statusText: "Success",
-                data: {
-                    user: {
-                        ...user._doc,
-                        activity: {},
-                    },
-                    allVerticalsData: [],
-                },
-            });
-        }
-
-        let activity = user.activity;
-
-        let allVerticalsData = [];
-        for (let vertical in activity) {
-            const id = vertical.slice(1);
-            let verticalData = await Vertical.findById(id)?.select("name _id");
-
-            if (!verticalData) {
-                await User.findByIdAndUpdate(req.mongoId, {
-                    $unset: { [`activity.${vertical}`]: "" },
-                });
-                continue;
-            }
-
-            let coursesData = [];
-            for (let course in activity[vertical]) {
-                let courseId = course.slice(1);
-                let courseData = await Course.findById(courseId);
-
-                if (!courseData) {
-                    await User.findByIdAndUpdate(req.mongoId, {
-                        $unset: { [`activity.${vertical}.${course}`]: "" },
-                    });
-
-                    continue;
-                }
-
-                let unitsData = [];
-                for (let unit in activity[vertical][course]) {
-                    let unitId = unit.slice(1);
-                    // if(!unitData){
-                    //     await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
-
-                    //     continue;
-                    // }
-                    let unitData = courseData.unitArr.find(
-                        (unit) => unit._id == unitId
-                    );
-
-                    if (!unitData) {
-                        await User.findByIdAndUpdate(req.mongoId, {
-                            $unset: {
-                                [`activity.${vertical}.${course}.${unit}`]: "",
-                            },
-                        });
-                        continue;
-                    }
-
-                    unitsData.push({
-                        _id: unitId,
-                        name: unitData.video.title,
-                        progress: activity[vertical][course][unit],
-                    });
-                }
-
-                coursesData.push({
-                    courseData: {
-                        _id: courseData._id,
-                        name: courseData.name,
-                    },
-                    unitsData,
-                });
-            }
-
-            allVerticalsData.push({
-                verticalData,
-                coursesData,
-            });
-        }
-
-        return res.status(200).send({
-            statusText: "Success",
-            data: {
-                user: {
-                    ...user._doc,
-                    activity: {},
-                },
-                allVerticalsData,
-            },
-        });
-    } catch (err) {
-        console.log(err);
-        res.status(500).send({
-            statusText: "Internal Server Error",
-            error: err.message,
-        });
+    if (!user) {
+      return res.status(404).send({
+        statusText: "User not found",
+      });
     }
+
+    if (!user.activity || user.activity == {}) {
+      return res.status(200).send({
+        statusText: "Success",
+        data: {
+          user: {
+            ...user._doc,
+            activity: {},
+          },
+          allVerticalsData: [],
+        },
+      });
+    }
+
+    let activity = user.activity;
+
+    let allVerticalsData = [];
+    for (let vertical in activity) {
+      const id = vertical.slice(1);
+      let verticalData = await Vertical.findById(id)?.select("name _id");
+
+      if (!verticalData) {
+        await User.findByIdAndUpdate(req.mongoId, {
+          $unset: { [`activity.${vertical}`]: "" },
+        });
+        continue;
+      }
+
+      let coursesData = [];
+      for (let course in activity[vertical]) {
+        let courseId = course.slice(1);
+        let courseData = await Course.findById(courseId);
+
+        if (!courseData) {
+          await User.findByIdAndUpdate(req.mongoId, {
+            $unset: { [`activity.${vertical}.${course}`]: "" },
+          });
+
+          continue;
+        }
+
+        let unitsData = [];
+        for (let unit in activity[vertical][course]) {
+          let unitId = unit.slice(1);
+          // if(!unitData){
+          //     await User.findByIdAndUpdate(req.mongoId, { $unset: { [`activity.${vertical}.${course}.${unit}`]: "" } });
+
+          //     continue;
+          // }
+          let unitData = courseData.unitArr.find((unit) => unit._id == unitId);
+
+          if (!unitData) {
+            await User.findByIdAndUpdate(req.mongoId, {
+              $unset: {
+                [`activity.${vertical}.${course}.${unit}`]: "",
+              },
+            });
+            continue;
+          }
+
+          unitsData.push({
+            _id: unitId,
+            name: unitData.video.title,
+            progress: activity[vertical][course][unit],
+          });
+        }
+
+        coursesData.push({
+          courseData: {
+            _id: courseData._id,
+            name: courseData.name,
+          },
+          unitsData,
+        });
+      }
+
+      allVerticalsData.push({
+        verticalData,
+        coursesData,
+      });
+    }
+
+    return res.status(200).send({
+      statusText: "Success",
+      data: {
+        user: {
+          ...user._doc,
+          activity: {},
+        },
+        allVerticalsData,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      statusText: "Internal Server Error",
+      error: err.message,
+    });
+  }
 });
 
 // const { unlink, stat } = require("node:fs/promises");
@@ -1029,5 +1036,5 @@ https://stackoverflow.com/questions/41329056/bulk-email-sending-usiing-node-js
 
 // mini route
 router.get("/check-authorized", userAuth, fetchPerson, async (req, res) => {
-    res.status(200).json({ statusText: "Authorized" });
+  res.status(200).json({ statusText: "Authorized" });
 });
