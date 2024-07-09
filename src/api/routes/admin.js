@@ -574,8 +574,8 @@ router.delete(
       }
 
       // deleting from cloudinary the image
-      if(verticalDoc?.image?.publicId){
-        await deleteFromCloudinary(verticalDoc.image?.publicId);
+      if(vertical?.image?.publicId){
+        await deleteFromCloudinary(vertical.image?.publicId);
       }
 
       const verticalDoc = await Vertical.findByIdAndDelete(verticalId); // returns the doc just before deletion
