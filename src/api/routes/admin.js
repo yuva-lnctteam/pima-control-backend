@@ -893,7 +893,7 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
   }
 });
 
-router.post(
+router.patch(
   "/users/:userId/suspend-user",
   adminAuth,
   fetchPerson,
