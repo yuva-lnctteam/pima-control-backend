@@ -436,6 +436,71 @@ router.patch(
     }
   );
 
+  router.patch(
+    "/verticals/:verticalId/courses/:courseId",
+    adminAuth,
+    fetchPerson,
+    isAdmin,
+    upload.single("courseImg"),
+    async (req, res) => {
+      // todo : validation
+      try {
+        const { verticalId, courseId } = req.params;
+
+        let courseImgPath = req.file?.path;
+
+        let update = {};
+
+        if (courseImgPath) {
+          // delete previous image
+          const courseDoc = await Course.findById(courseId);
+          if(courseDoc?.image?.publicId){
+            await deleteFromCloudinary(courseDoc.image?.publicId);
+          }
+
+          // upload new image
+          const courseImageUploaded = await uploadOnCloudinary(
+            courseImgPath,
+            "courses"
+          );
+
+          if (!courseImageUploaded) {
+            res.status(501).send({
+              statusText: "Your file could not be uploaded.",
+            });
+          }
+
+          let image = {
+            src: courseImageUploaded?.url,
+            publicId: courseImageUploaded.public_id,
+          };
+
+          update.image = image;
+        }
+
+        update.name = req.body.name;
+        update.desc = req.body.desc;
+
+        const courseDoc = await Course.findByIdAndUpdate(courseId, update, { new: true });
+
+        res.status(200).json({
+          statusText: statusText.SUCCESS,
+          courseInfo: {
+            name: courseDoc.name,
+            desc: courseDoc.desc,
+            image: courseDoc.image,
+          },
+        });
+
+      } catch (err) {
+        // console.error(err.message);
+        res.status(500).json({
+          statusText: statusText.INTERNAL_SERVER_ERROR,
+        });
+      }
+    }
+  );
+    
 //! validated, doubt
 router.post(
   "/verticals/:verticalId/courses/add",
