@@ -917,9 +917,13 @@ router.patch(
           statusText: "User unsuspended successfully",
         });
       }
-      
+
       user.isSuspended = true;
       await user.save();
+
+      return res.status(200).json({
+        statusText: "User suspended successfully",
+      });
     } catch (err) {
       console.log(err);
       res.status(500).json({ statusText: statusText.FAIL });
