@@ -514,30 +514,27 @@ router.post(
       const { verticalId } = req.params;
 
       let courseImgPath = req.file?.path;
-      if (!courseImgPath) {
-        return res.status(501).json({
-          statusText: "Image not provided",
-        });
-      }
-
-      const courseImageUploaded = await uploadOnCloudinary(
-        courseImgPath,
-        "courses"
-      );
-
-      if (!courseImageUploaded) {
-        res.status(501).send({
-          statusText: "Your file could not be uploaded.",
-        });
-      }
-
-      let image = {
-        src: courseImageUploaded?.url,
-        publicId: courseImageUploaded.public_id,
-      };
-
       const course = req.body;
-      course.image = image;
+      if (courseImgPath) {
+        const courseImageUploaded = await uploadOnCloudinary(
+          courseImgPath,
+          "courses"
+        );
+  
+        if (!courseImageUploaded) {
+          res.status(501).send({
+            statusText: "Your file could not be uploaded.",
+          });
+        }
+  
+        let image = {
+          src: courseImageUploaded?.url,
+          publicId: courseImageUploaded.public_id,
+        };
+  
+        course.image = image;
+      }
+
 
       const courseDoc = await Course.create(course);
       // console.log(courseDoc);
@@ -692,8 +689,10 @@ router.delete(
           .json({ statusText: statusText.COURSE_NOT_FOUND });
       }
 
-      // deleting from cloudinary the image
-      await deleteFromCloudinary(courseDoc.image?.publicId);
+      if(courseDoc?.image?.publicId){
+        // deleting from cloudinary the image
+        await deleteFromCloudinary(courseDoc.image?.publicId);
+      }
 
       // deleting the course
       await Course.findByIdAndDelete(courseId);
