@@ -171,6 +171,10 @@ const UserSchema = mongoose.Schema(
             type: String,
             enum: ["M", "F", "O"],
         },
+        isSuspended: {
+            type: Boolean,
+            default: false,
+        },
     },
     { minimize: false }
 );

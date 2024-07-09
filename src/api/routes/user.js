@@ -117,6 +117,10 @@ router.post("/login", userAuth, async (req, res) => {
       return res.status(404).json({ statusText: "User Not Found" });
     }
 
+    if(userDoc1?.isSuspended){
+      return res.status(403).json({ statusText: "Your account is suspended" });
+    }
+
     if (userDoc1.password !== enteredPassword) {
       return res.status(401).json({ statusText: "Incorrect Password" });
     }

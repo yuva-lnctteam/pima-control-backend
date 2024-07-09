@@ -319,23 +319,23 @@ router.post(
           verticalImgPath,
           "verticals"
         );
-  
+
         if (!verticalImageUploaded) {
           res.status(501).send({
             statusText: "Your file could not be uploaded.",
           });
         }
-  
+
         let image = {
           src: verticalImageUploaded?.url,
           publicId: verticalImageUploaded.public_id,
         };
-  
+
         await Vertical.create({
           ...req.body,
           image,
         });
-  
+
         return res.status(200).json({
           statusText: statusText.VERTICAL_CREATE_SUCCESS,
         });
@@ -358,149 +358,150 @@ router.post(
 );
 
 router.patch(
-    "/verticals/:verticalId",
-    adminAuth,
-    fetchPerson,
-    isAdmin,
-    upload.single("verticalImg"),
-    async (req, res) => {
-      const { verticalId } = req.params;
-      let { name, desc } = req.body;
-  
+  "/verticals/:verticalId",
+  adminAuth,
+  fetchPerson,
+  isAdmin,
+  upload.single("verticalImg"),
+  async (req, res) => {
+    const { verticalId } = req.params;
+    let { name, desc } = req.body;
+
+    let update = {};
+
+    if (name) {
+      update.name = name;
+    }
+
+    if (desc) {
+      update.desc = desc;
+    }
+
+    // verticalId = null;
+
+    let verticalImgPath = req.file?.path;
+
+    try {
+      let verticalDoc = await Vertical.findById(verticalId);
+
+      if (!verticalDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.VERTICAL_NOT_FOUND });
+      }
+
+      if (verticalImgPath) {
+        // delete previous image
+        if (verticalDoc?.image?.publicId) {
+          await deleteFromCloudinary(verticalDoc.image?.publicId);
+        }
+
+        // upload new image
+
+        const verticalImageUploaded = await uploadOnCloudinary(
+          verticalImgPath,
+          "verticals"
+        );
+
+        if (!verticalImageUploaded) {
+          res.status(501).send({
+            statusText: "Your file could not be uploaded.",
+          });
+        }
+
+        let image = {
+          src: verticalImageUploaded?.url,
+          publicId: verticalImageUploaded.public_id,
+        };
+
+        update.image = image;
+      }
+
+      verticalDoc = await Vertical.findByIdAndUpdate(verticalId, update, {
+        new: true,
+      });
+
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        verticalInfo: {
+          name: verticalDoc.name,
+          desc: verticalDoc.desc,
+          image: verticalDoc.image,
+        },
+      });
+    } catch (err) {
+      // console.log(err);
+      res.status(500).json({ statusText: statusText.FAIL });
+    }
+  }
+);
+
+router.patch(
+  "/verticals/:verticalId/courses/:courseId",
+  adminAuth,
+  fetchPerson,
+  isAdmin,
+  upload.single("courseImg"),
+  async (req, res) => {
+    // todo : validation
+    try {
+      const { verticalId, courseId } = req.params;
+
+      let courseImgPath = req.file?.path;
+
       let update = {};
-  
-      if (name) {
-        update.name = name;
-      }
-  
-      if (desc) {
-        update.desc = desc;
-      }
-  
-      // verticalId = null;
-  
-      let verticalImgPath = req.file?.path;
-  
-      try {
-        let verticalDoc = await Vertical.findById(verticalId);
-  
-        if (!verticalDoc) {
-          return res
-            .status(404)
-            .json({ statusText: statusText.VERTICAL_NOT_FOUND });
+
+      if (courseImgPath) {
+        // delete previous image
+        const courseDoc = await Course.findById(courseId);
+        if (courseDoc?.image?.publicId) {
+          await deleteFromCloudinary(courseDoc.image?.publicId);
         }
-  
-        if (verticalImgPath) {
-          // delete previous image
-          if(verticalDoc?.image?.publicId){
-            await deleteFromCloudinary(verticalDoc.image?.publicId);
-          }
-  
-          // upload new image
-  
-          const verticalImageUploaded = await uploadOnCloudinary(
-            verticalImgPath,
-            "verticals"
-          );
-  
-          if (!verticalImageUploaded) {
-            res.status(501).send({
-              statusText: "Your file could not be uploaded.",
-            });
-          }
-  
-          let image = {
-            src: verticalImageUploaded?.url,
-            publicId: verticalImageUploaded.public_id,
-          };
-  
-          update.image = image;
+
+        // upload new image
+        const courseImageUploaded = await uploadOnCloudinary(
+          courseImgPath,
+          "courses"
+        );
+
+        if (!courseImageUploaded) {
+          res.status(501).send({
+            statusText: "Your file could not be uploaded.",
+          });
         }
-  
-        verticalDoc = await Vertical.findByIdAndUpdate(verticalId, update, {
-          new: true,
-        });
-  
-        res.status(200).json({
-          statusText: statusText.SUCCESS,
-          verticalInfo: {
-            name: verticalDoc.name,
-            desc: verticalDoc.desc,
-            image: verticalDoc.image,
-          },
-        });
-      } catch (err) {
-        // console.log(err);
-        res.status(500).json({ statusText: statusText.FAIL });
+
+        let image = {
+          src: courseImageUploaded?.url,
+          publicId: courseImageUploaded.public_id,
+        };
+
+        update.image = image;
       }
+
+      update.name = req.body.name;
+      update.desc = req.body.desc;
+
+      const courseDoc = await Course.findByIdAndUpdate(courseId, update, {
+        new: true,
+      });
+
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        courseInfo: {
+          name: courseDoc.name,
+          desc: courseDoc.desc,
+          image: courseDoc.image,
+        },
+      });
+    } catch (err) {
+      // console.error(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
     }
-  );
+  }
+);
 
-  router.patch(
-    "/verticals/:verticalId/courses/:courseId",
-    adminAuth,
-    fetchPerson,
-    isAdmin,
-    upload.single("courseImg"),
-    async (req, res) => {
-      // todo : validation
-      try {
-        const { verticalId, courseId } = req.params;
-
-        let courseImgPath = req.file?.path;
-
-        let update = {};
-
-        if (courseImgPath) {
-          // delete previous image
-          const courseDoc = await Course.findById(courseId);
-          if(courseDoc?.image?.publicId){
-            await deleteFromCloudinary(courseDoc.image?.publicId);
-          }
-
-          // upload new image
-          const courseImageUploaded = await uploadOnCloudinary(
-            courseImgPath,
-            "courses"
-          );
-
-          if (!courseImageUploaded) {
-            res.status(501).send({
-              statusText: "Your file could not be uploaded.",
-            });
-          }
-
-          let image = {
-            src: courseImageUploaded?.url,
-            publicId: courseImageUploaded.public_id,
-          };
-
-          update.image = image;
-        }
-
-        update.name = req.body.name;
-        update.desc = req.body.desc;
-
-        const courseDoc = await Course.findByIdAndUpdate(courseId, update, { new: true });
-
-        res.status(200).json({
-          statusText: statusText.SUCCESS,
-          courseInfo: {
-            name: courseDoc.name,
-            desc: courseDoc.desc,
-            image: courseDoc.image,
-          },
-        });
-
-      } catch (err) {
-        // console.error(err.message);
-        res.status(500).json({
-          statusText: statusText.INTERNAL_SERVER_ERROR,
-        });
-      }
-    }
-  );
-    
 //! validated, doubt
 router.post(
   "/verticals/:verticalId/courses/add",
@@ -520,21 +521,20 @@ router.post(
           courseImgPath,
           "courses"
         );
-  
+
         if (!courseImageUploaded) {
           res.status(501).send({
             statusText: "Your file could not be uploaded.",
           });
         }
-  
+
         let image = {
           src: courseImageUploaded?.url,
           publicId: courseImageUploaded.public_id,
         };
-  
+
         course.image = image;
       }
-
 
       const courseDoc = await Course.create(course);
       // console.log(courseDoc);
@@ -636,7 +636,7 @@ router.delete(
       }
 
       // deleting from cloudinary the image
-      if(vertical?.image?.publicId){
+      if (vertical?.image?.publicId) {
         await deleteFromCloudinary(vertical.image?.publicId);
       }
 
@@ -689,7 +689,7 @@ router.delete(
           .json({ statusText: statusText.COURSE_NOT_FOUND });
       }
 
-      if(courseDoc?.image?.publicId){
+      if (courseDoc?.image?.publicId) {
         // deleting from cloudinary the image
         await deleteFromCloudinary(courseDoc.image?.publicId);
       }
@@ -892,6 +892,33 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
     res.status(500).json({ statusText: statusText.FAIL });
   }
 });
+
+router.get(
+  "/users/:userId/suspend-user",
+  adminAuth,
+  fetchPerson,
+  isAdmin,
+  async (req, res) => {
+    // todo : paginate, the user count is too high
+    const { userId } = req.params;
+
+    try {
+      const user = await User.findOne({ userId: userId });
+
+      if (!user) {
+        return res.status(404).json({
+          statusText: "User not found",
+        });
+      }
+
+      user.isSuspended = true;
+      await user.save();
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ statusText: statusText.FAIL });
+    }
+  }
+);
 
 router.patch(
   "/users/reset-password/:userId",
