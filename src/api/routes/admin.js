@@ -894,7 +894,7 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
 });
 
 router.patch(
-  "/users/:userId/suspend-user",
+  "/users/:userId/toggle-suspend-user",
   adminAuth,
   fetchPerson,
   isAdmin,
@@ -910,6 +910,14 @@ router.patch(
         });
       }
 
+      if(user.isSuspended){
+        user.isSuspended = false;
+        await user.save();
+        return res.status(200).json({
+          statusText: "User unsuspended successfully",
+        });
+      }
+      
       user.isSuspended = true;
       await user.save();
     } catch (err) {
