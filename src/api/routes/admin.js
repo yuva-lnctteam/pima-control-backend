@@ -893,13 +893,12 @@ router.get("/users/all", adminAuth, fetchPerson, isAdmin, async (req, res) => {
   }
 });
 
-router.get(
+router.post(
   "/users/:userId/suspend-user",
   adminAuth,
   fetchPerson,
   isAdmin,
   async (req, res) => {
-    // todo : paginate, the user count is too high
     const { userId } = req.params;
 
     try {
