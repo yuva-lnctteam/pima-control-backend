@@ -803,7 +803,7 @@ router.get("/verticals/:verticalId/courses/:courseId/units/:unitId",  adminAuth,
 )
 
 router.put(
-  "/verticals/:verticalId/courses/:courseId/units/:unitId/edit",
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/edit?pdf=true",
   adminAuth,
   fetchPerson,
   isAdmin,
@@ -811,6 +811,8 @@ router.put(
     // todo : validation
     const { verticalId, courseId, unitId } = req.params;
     let unit = req.body;
+
+    let changedPdf = req.query.pdf;
 
     if(!unit.video){
       return res.status(400).json({
@@ -839,7 +841,7 @@ router.put(
 
       // deleting files from cloudinary of pdf
 
-      if (courseDocRead.unitArr[unitIndex].pdf?.publicId) {
+      if (courseDocRead.unitArr[unitIndex].pdf?.publicId && changedPdf) {
         await deleteFromCloudinary(courseDocRead.unitArr[unitIndex].pdf?.publicId);
       }
 
