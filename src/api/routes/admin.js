@@ -803,7 +803,7 @@ router.get("/verticals/:verticalId/courses/:courseId/units/:unitId",  adminAuth,
 )
 
 router.put(
-  "/verticals/:verticalId/courses/:courseId/units/:unitId/edit?pdf=true",
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/edit",
   adminAuth,
   fetchPerson,
   isAdmin,
