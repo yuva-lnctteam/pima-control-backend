@@ -763,6 +763,100 @@ router.delete(
   }
 );
 
+router.get("/verticals/:verticalId/courses/:courseId/units/:unitId",  adminAuth,
+  fetchPerson,
+  isAdmin,
+  async (req, res) => {
+    // todo : validation
+    const { verticalId, courseId, unitId } = req.params;
+
+    try {
+      const courseDoc = await Course.findById(courseId);
+
+      if (!courseDoc) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.COURSE_NOT_FOUND });
+      }
+
+    
+      const unit = courseDoc.unitArr.find((unit) => unit._id == unitId);
+      
+      
+      if (!unit) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.UNIT_NOT_FOUND });
+      }
+
+      res.status(200).json({
+        statusText: statusText.SUCCESS,
+        unit,
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+)
+
+router.put(
+  "/verticals/:verticalId/courses/:courseId/units/:unitId/edit",
+  adminAuth,
+  fetchPerson,
+  isAdmin,
+  async (req, res) => {
+    // todo : validation
+    const { verticalId, courseId, unitId } = req.params;
+    let unit = req.body;
+
+    if(!unit.video){
+      return res.status(400).json({
+        statusText: "Video details are required",
+      });
+    }
+
+    try {
+      let courseDocRead = await Course.findById(courseId);
+
+      if (!courseDocRead) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.COURSE_NOT_FOUND });
+      }
+ 
+      let unitIndex = courseDocRead.unitArr.findIndex(
+        (unit) => unit._id == unitId
+      );
+
+      if (unitIndex === -1) {
+        return res
+          .status(404)
+          .json({ statusText: statusText.UNIT_NOT_FOUND });
+      }
+
+      // deleting files from cloudinary of pdf
+
+      if (courseDocRead.unitArr[unitIndex].pdf?.publicId) {
+        await deleteFromCloudinary(courseDocRead.unitArr[unitIndex].pdf?.publicId);
+      }
+
+      courseDocRead.unitArr[unitIndex] = unit;
+      await courseDocRead.save();
+
+      res.status(200).json({
+        statusText: statusText.UNIT_CREATE_SUCCESS,
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({
+        statusText: statusText.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+);
 // router.post("/add-users", csvUpload(), async (req, res) => {
 //   console.log(req.originalUrl);
 //   // ! todo: SEND MAILS
