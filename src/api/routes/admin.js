@@ -841,7 +841,7 @@ router.put(
 
       // deleting files from cloudinary of pdf
 
-      if (courseDocRead.unitArr[unitIndex].pdf?.publicId && changedPdf) {
+      if (courseDocRead.unitArr[unitIndex].pdf?.publicId && changedPdf === "true") {
         await deleteFromCloudinary(courseDocRead.unitArr[unitIndex].pdf?.publicId);
       }
 
