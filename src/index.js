@@ -39,7 +39,7 @@ app.use("/api/admin/auth", require("./api/routes/admin.js"));
 
 app.use("/api/public", require("./api/routes/public.js"));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     console.log(`Server is listening at port ${PORT}`);
 
