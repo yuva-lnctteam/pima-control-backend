@@ -45,7 +45,10 @@ const {
   addRequiredUnitActivity,
   isRequiredUnitActivityPresent,
 } = require("../../utilities/helper_functions.js");
-const { uploadOnCloudinary, deleteFromCloudinary } = require("../../utilities/cloudinary.js");
+const {
+  uploadOnCloudinary,
+  deleteFromCloudinary,
+} = require("../../utilities/cloudinary.js");
 
 /******************** My Configs **********************/
 // Multer
@@ -117,7 +120,7 @@ router.post("/login", userAuth, async (req, res) => {
       return res.status(404).json({ statusText: "User Not Found" });
     }
 
-    if(userDoc1?.isSuspended){
+    if (userDoc1?.isSuspended) {
       return res.status(403).json({ statusText: "Your account is suspended" });
     }
 
@@ -193,8 +196,8 @@ router.post(
 
     try {
       let user = await User.findById(mongoId);
-      
-    //   console.log(user)
+
+      //   console.log(user)
       if (!user) {
         return res.status(404).json({ statusText: "User not found" });
       }
@@ -234,8 +237,8 @@ router.post(
         .status(200)
         .json({ statusText: "Profile pic updated", userDoc: updatedUser });
     } catch (err) {
-        console.log(err.message);
-        res.status(500).json({ error: "Internal Server Error" });
+      console.log(err.message);
+      res.status(500).json({ error: "Internal Server Error" });
     }
   }
 );
@@ -581,6 +584,10 @@ router.get(
         isEligibleToTakeQuiz =
           unitActivity.video.watchTimeInPercent >=
           vars.activity.MIN_WATCH_TIME_IN_PERCENT;
+
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][
+          `u${unitId}`
+        ].lastVisited = new Date().toISOString();
       } else {
         // add default unit activity field to the user doc
         addRequiredUnitActivity(userDoc, verticalId, courseId, unitId);
@@ -591,10 +598,14 @@ router.get(
           isEligibleToTakeQuiz = true;
         }
 
-        await User.findByIdAndUpdate(mongoId, {
-          activity: userDoc.activity,
-        });
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][
+          `u${unitId}`
+        ].lastVisited = new Date().toISOString();
       }
+
+      await User.findByIdAndUpdate(mongoId, {
+        activity: userDoc.activity,
+      });
       // console.log("isCertGenerated: ", isCertGenerated);
 
       // we need courseInfo and userInfo for the "Get certificate button" which redirects on the cert's url and url contains courseId, unitId, userId
@@ -762,6 +773,13 @@ router.get(
         });
       }
 
+      userDoc.activity[`v${verticalId}`][`c${courseId}`][
+        `u${unitId}`
+      ].lastVisited = new Date().toISOString();
+
+      // hh
+      await userDoc.save();
+
       res.status(200).json({
         statusText: statusText.SUCCESS,
         quiz: unitDoc.quiz,
@@ -820,12 +838,22 @@ router.post(
         ) {
           hasPassedQuiz = true;
           hasPassedQuizFirstTime = true;
+
+          unitActivity.quiz = {
+            scoreInPercent: quizScoreInPercent,
+            passingDate: new Date().toISOString(),
+          };
+
+          unitActivity.lastVisited = new Date().toISOString();
           // increase number of cert unlocked for this vertical by one
 
           // await Vertical.findByIdAndUpdate(verticalId, { //certificate unlock count in mongo
           //   $inc: { certUnlocked: 1 },
           // });
         }
+
+        userDoc.activity[`v${verticalId}`][`c${courseId}`][`u${unitId}`] =
+          unitActivity;
 
         const updatedDoc = await User.findByIdAndUpdate(mongoId, userDoc, {
           new: true,

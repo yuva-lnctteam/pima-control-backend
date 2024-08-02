@@ -39,6 +39,9 @@ const UnitSchema = mongoose.Schema({
         type: Array,
         default: [],
     },
+    lastVisited: {
+        type: Date,
+    }
 });
 
 const Unit = mongoose.model("unit", UnitSchema);
