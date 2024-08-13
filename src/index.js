@@ -5,8 +5,25 @@ const dotenv = require("dotenv");
 
 // const csvUpload = require("express-fileupload");
 const cors = require("cors");
+
+const allowedOrigins = [
+  "https://pima-control.vercel.app/",
+  "https://portal.pima.in",
+  "http://localhost:3000", // Example for local development
+];
+
 const corsOptions = {
-  origin: "https://pima-control.vercel.app", // Only allow requests from your website
+  // array of allowed origins
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   // origin: 'http://localhost:3000', // Only allow requests from your website
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, // Enable cookies and authentication headers
