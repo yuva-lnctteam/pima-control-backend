@@ -6,10 +6,10 @@ const dotenv = require("dotenv");
 // const csvUpload = require("express-fileupload");
 const cors = require("cors");
 const corsOptions = {
-    origin: "https://pima-control.vercel.app", // Only allow requests from your website
-    // origin: 'http://localhost:3000', // Only allow requests from your website
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true, // Enable cookies and authentication headers
+  origin: "https://pima-control.vercel.app", // Only allow requests from your website
+  // origin: 'http://localhost:3000', // Only allow requests from your website
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true, // Enable cookies and authentication headers
 };
 
 // app.use(cors(corsOptions));
@@ -39,12 +39,16 @@ app.use("/api/admin/auth", require("./api/routes/admin.js"));
 
 app.use("/api/public", require("./api/routes/public.js"));
 
+app.get("/", (req, res) => {
+  res.send("Welcome to Pima Control API");
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-    console.log(`Server is listening at port ${PORT}`);
+  console.log(`Server is listening at port ${PORT}`);
 
-    //   createDir(vars.imageFile.ORIGINAL_UPLOADS_DIR_PATH);
-    //   createDir(vars.imageFile.COMPRESSED_UPLOADS_DIR_PATH);
+  //   createDir(vars.imageFile.ORIGINAL_UPLOADS_DIR_PATH);
+  //   createDir(vars.imageFile.COMPRESSED_UPLOADS_DIR_PATH);
 });
 
 /*
