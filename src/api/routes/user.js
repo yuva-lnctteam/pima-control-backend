@@ -907,7 +907,7 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
 
     let activity = user.activity;
 
-    let allVerticalsData = [];
+    let allUnitsData = [];
     for (let vertical in activity) {
       const id = vertical.slice(1);
       let verticalData = await Vertical.findById(id)?.select("name _id");
@@ -919,7 +919,6 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
         continue;
       }
 
-      let coursesData = [];
       for (let course in activity[vertical]) {
         let courseId = course.slice(1);
         let courseData = await Course.findById(courseId);
@@ -932,7 +931,6 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
           continue;
         }
 
-        let unitsData = [];
         for (let unit in activity[vertical][course]) {
           let unitId = unit.slice(1);
           // if(!unitData){
@@ -951,27 +949,28 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
             continue;
           }
 
-          unitsData.push({
-            _id: unitId,
-            name: unitData.video.title,
-            progress: activity[vertical][course][unit],
+          allUnitsData.push({
+            courseData: {
+              _id: courseData._id,
+              name: courseData.name,
+            },
+            verticalData: {
+              _id: verticalData._id,
+              name: verticalData.name,
+            },
+            unitData: {
+              _id: unitData._id,
+              name: unitData.video.title,
+              progress: activity[vertical][course][unit],
+            },
           });
         }
-
-        coursesData.push({
-          courseData: {
-            _id: courseData._id,
-            name: courseData.name,
-          },
-          unitsData,
-        });
       }
-
-      allVerticalsData.push({
-        verticalData,
-        coursesData,
-      });
     }
+
+    allUnitsData = allUnitsData.sort((a, b) => {
+      return new Date(b.unitData.progress.lastVisited).getTime() - new Date(a.unitData.progress.lastVisited).getTime();
+    })
 
     return res.status(200).send({
       statusText: "Success",
@@ -979,8 +978,8 @@ router.get("/profile", userAuth, fetchPerson, isUser, async (req, res) => {
         user: {
           ...user._doc,
           activity: {},
-        },
-        allVerticalsData,
+        },  
+        allUnitsData,
       },
     });
   } catch (err) {
