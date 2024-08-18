@@ -13,23 +13,18 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-  // array of allowed origins
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
+    if (!origin) return callback(null, true); // Allow requests with no origin (e.g., curl requests)
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  // origin: 'http://localhost:3000', // Only allow requests from your website
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true, // Enable cookies and authentication headers
+  allowedHeaders: "Content-Type,Authorization", // Ensure custom headers are allowed
+  credentials: true,
 };
-
-app.options('*', cors(corsOptions)); 
 
 // app.use(cors(corsOptions));
 app.use(cors(corsOptions));
@@ -63,6 +58,7 @@ app.get("/", (req, res) => {
   res.send("Welcome to Pima Control API");
 });
 
+app.options('*', cors(corsOptions)); 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is listening at port ${PORT}`);
