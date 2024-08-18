@@ -7,7 +7,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 
 const allowedOrigins = [
-  "https://pima-control.vercel.app/",
+  "https://pima-control.vercel.app",
   "https://portal.pima.in",
   "http://localhost:3000", // Example for local development
 ];
@@ -29,6 +29,8 @@ const corsOptions = {
   credentials: true, // Enable cookies and authentication headers
 };
 
+app.options('*', cors(corsOptions)); 
+
 // app.use(cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json({})); // to use req.body
@@ -44,6 +46,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Mine returns
 const connectToMongoDB = require("./databases/mongodb/config");
+const { header } = require("express-validator");
 connectToMongoDB();
 
 // const { createDir } = require("./utilities/helper_functions");
