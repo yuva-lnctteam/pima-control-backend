@@ -22,15 +22,12 @@ const corsOptions = {
     }
   },
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  allowedHeaders: "Content-Type,Authorization", // Ensure custom headers are allowed
   credentials: true,
 };
 
 // app.use(cors(corsOptions));
 app.use(cors(corsOptions));
-
-app.options('*', cors(corsOptions)); 
-
+app.options("*", cors(corsOptions));
 app.use(express.json({})); // to use req.body
 app.use(express.urlencoded({ extended: true }));
 
