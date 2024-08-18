@@ -28,6 +28,9 @@ const corsOptions = {
 
 // app.use(cors(corsOptions));
 app.use(cors(corsOptions));
+
+app.options('*', cors(corsOptions)); 
+
 app.use(express.json({})); // to use req.body
 app.use(express.urlencoded({ extended: true }));
 
@@ -58,7 +61,6 @@ app.get("/", (req, res) => {
   res.send("Welcome to Pima Control API");
 });
 
-app.options('*', cors(corsOptions)); 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is listening at port ${PORT}`);
